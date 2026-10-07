@@ -1,0 +1,325 @@
+// Prisma Schema para a plataforma VACINEI!? (TCC CESMAC)
+// Banco de dados: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum UserRole {
+  CIDADAO
+  PROFISSIONAL_SAUDE
+  ADMIN
+}
+
+enum TargetAudience {
+  CRIANCA
+  ADOLESCENTE
+  ADULTO
+  IDOSO
+  GESTANTE
+  ESPECIAL
+}
+
+enum VaccineStatus {
+  EM_DIA
+  ATRASADA
+  COMPLETA
+  CONFIRMADO
+}
+
+enum RecordOrigin {
+  MANUAL
+  OCR_ICR
+  SISTEMA_PRESENCIAL
+}
+
+enum ClientPlatform {
+  MOBILE
+  WEB
+}
+
+// ==========================================
+// USUÁRIOS, AUTENTICAÇÃO E PERFIS
+// ==========================================
+
+model User {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  cpf          String?   @unique
+  phone        String?
+  birthDate    DateTime? @map("birth_date")
+  role         UserRole  @default(CIDADAO)
+  avatarUrl    String?   @map("avatar_url")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relações
+  professionalRegistry ProfessionalRegistry?
+  dependents           Dependent[]
+  vaccinationRecords   VaccinationRecord[]    @relation("CitizenVaccines")
+  appliedRecords       VaccinationRecord[]    @relation("AppliedVaccines")
+  refreshTokens        RefreshToken[]
+  deviceTokens         DeviceToken[]
+  passwordResetCodes   PasswordResetCode[]
+  notifications        Notification[]
+
+  @@map("users")
+}
+
+model ProfessionalRegistry {
+  id             String    @id @default(uuid())
+  userId         String    @unique @map("user_id")
+  council        String    // ex: CRM, COREN, CRF
+  registryNumber String    @map("registry_number")
+  uf             String    // Sigla do estado (ex: AL, SP)
+  isVerified     Boolean   @default(false) @map("is_verified")
+  verifiedAt     DateTime? @map("verified_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([council, registryNumber, uf])
+  @@map("professional_registries")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String    @map("user_id")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model PasswordResetCode {
+  id        String   @id @default(uuid())
+  code      String   // Código de 6 dígitos
+  userId    String   @map("user_id")
+  attempts  Int      @default(0)
+  isUsed    Boolean  @default(false) @map("is_used")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_codes")
+}
+
+// ==========================================
+// DEPENDENTES (RS008)
+// ==========================================
+
+model Dependent {
+  id           String    @id @default(uuid())
+  name         String
+  birthDate    DateTime  @map("birth_date")
+  cpf          String?   @unique
+  relationship String    // ex: FILHO, FILHA, TUTELADO
+  gender       String?
+  guardianId   String    @map("guardian_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  guardian           User                @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  vaccinationRecords VaccinationRecord[]
+
+  // RS008: Impede cadastro com mesmo Nome Completo e Data de Nascimento por outro responsável
+  @@unique([name, birthDate])
+  @@map("dependents")
+}
+
+// ==========================================
+// CALENDÁRIO VACINAL, VACINAS E DOSES
+// ==========================================
+
+model Vaccine {
+  id             String         @id @default(uuid())
+  name           String         @unique
+  description    String?
+  targetAudience TargetAudience @default(CRIANCA) @map("target_audience")
+  targetDisease  String         @map("target_disease") // Doenças prevenidas
+  dosesCount     Int            @map("doses_count")
+  isActive       Boolean        @default(true) @map("is_active")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  doses     Dose[]
+  campaigns CampaignVaccine[]
+
+  @@map("vaccines")
+}
+
+model Dose {
+  id                       String   @id @default(uuid())
+  vaccineId                String   @map("vaccine_id")
+  doseNumber               Int      @map("dose_number") // 1, 2, 3... ou 0 para dose única
+  doseName                 String   @map("dose_name")   // ex: 1ª Dose, Reforço
+  recommendedAgeMonths     Int?     @map("recommended_age_months")
+  intervalDaysFromPrevious Int?     @map("interval_days_from_previous")
+  description              String?
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  vaccine Vaccine             @relation(fields: [vaccineId], references: [id], onDelete: Cascade)
+  records VaccinationRecord[]
+
+  @@unique([vaccineId, doseNumber])
+  @@map("doses")
+}
+
+// ==========================================
+// REGISTROS DE APLICAÇÃO E CADERNETA
+// ==========================================
+
+model VaccinationRecord {
+  id              String        @id @default(uuid())
+  userId          String?       @map("user_id")
+  dependentId     String?       @map("dependent_id")
+  doseId          String        @map("dose_id")
+  status          VaccineStatus @default(EM_DIA)
+  applicationDate DateTime?     @map("application_date")
+  expectedDate    DateTime?     @map("expected_date")
+  lotNumber       String?       @map("lot_number")
+  manufacturer    String?
+  ubsId           String?       @map("ubs_id")
+  appliedById     String?       @map("applied_by_id") // Profissional autenticado (RS006 / RF010)
+  origin          RecordOrigin  @default(MANUAL)
+  ocrConfidence   Float?        @map("ocr_confidence")
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  user      User?      @relation("CitizenVaccines", fields: [userId], references: [id], onDelete: Cascade)
+  dependent Dependent? @relation(fields: [dependentId], references: [id], onDelete: Cascade)
+  dose      Dose       @relation(fields: [doseId], references: [id], onDelete: Restrict)
+  ubs       Ubs?       @relation(fields: [ubsId], references: [id], onDelete: SetNull)
+  appliedBy User?      @relation("AppliedVaccines", fields: [appliedById], references: [id], onDelete: SetNull)
+
+  @@map("vaccination_records")
+}
+
+// ==========================================
+// UNIDADES BÁSICAS DE SAÚDE (UBSs)
+// ==========================================
+
+model Ubs {
+  id           String   @id @default(uuid())
+  cnes         String?  @unique // Código Nacional de Estabelecimentos de Saúde
+  name         String
+  address      String
+  neighborhood String?
+  city         String
+  state        String   // UF
+  zipCode      String?  @map("zip_code")
+  latitude     Float
+  longitude    Float
+  phone        String?
+  openingHours String?  @map("opening_hours")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  vaccinationRecords VaccinationRecord[]
+  campaigns          CampaignUbs[]
+
+  @@map("ubss")
+}
+
+// ==========================================
+// CAMPANHAS VACINAIS
+// ==========================================
+
+model Campaign {
+  id             String          @id @default(uuid())
+  title          String
+  description    String
+  bannerUrl      String?         @map("banner_url")
+  startDate      DateTime        @map("start_date")
+  endDate        DateTime        @map("end_date")
+  targetAudience TargetAudience? @map("target_audience")
+  isActive       Boolean         @default(true) @map("is_active")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  vaccines         CampaignVaccine[]
+  participatingUbs CampaignUbs[]
+
+  @@map("campaigns")
+}
+
+model CampaignVaccine {
+  id         String   @id @default(uuid())
+  campaignId String   @map("campaignId")
+  vaccineId  String   @map("vaccineId")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  vaccine  Vaccine  @relation(fields: [vaccineId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, vaccineId])
+  @@map("campaign_vaccines")
+}
+
+model CampaignUbs {
+  id         String   @id @default(uuid())
+  campaignId String   @map("campaign_id")
+  ubsId      String   @map("ubs_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  ubs      Ubs      @relation(fields: [ubsId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, ubsId])
+  @@map("campaign_ubss")
+}
+
+// ==========================================
+// DISPOSITIVOS E NOTIFICAÇÕES (FCM MULTI-CLIENTE)
+// ==========================================
+
+model DeviceToken {
+  id         String         @id @default(uuid())
+  userId     String         @map("user_id")
+  token      String         @unique
+  platform   ClientPlatform
+  deviceName String?        @map("device_name")
+  lastUsedAt DateTime       @default(now()) @map("last_used_at")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("device_tokens")
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  title     String
+  body      String
+  data      String?   // JSON com payload complementar
+  isRead    Boolean   @default(false) @map("is_read")
+  sentAt    DateTime  @default(now()) @map("sent_at")
+  readAt    DateTime? @map("read_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
