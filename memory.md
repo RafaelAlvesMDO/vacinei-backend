@@ -8,12 +8,12 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 
 - **Fase Atual:** Fase 2 - CRUDs Essenciais e Autenticação (Foco Pré-Banca: 15 de Outubro de 2026)
 - **Status:** 
-  - **Script de Seeds (`prisma/seed.ts`) implementado e executado com sucesso:** 12 vacinas do SUS com esquema completo de doses, 5 UBSs de Maceió/AL com georreferenciamento e usuários de teste (Admin, Profissional de Saúde e Cidadão com dependentes).
+  - **Script de Seeds (`prisma/seed.ts`) implementado e executado com sucesso:** 12 vacinas do SUS com esquema completo de doses, 36 UBSs reais de Maceió/AL com georreferenciamento cobrindo os 8 Distritos Sanitários (com CNES, logradouro, bairro, CEP, telefone, horário e coordenadas exatas) e usuários de teste (Admin, Profissional de Saúde e Cidadão com dependentes).
   - **Infraestrutura de Autenticação e Segurança ativa:** `bcryptjs` para hash de senhas, `jsonwebtoken` para access tokens (15m), refresh tokens opacos (30 dias) persistidos no PostgreSQL, middlewares `ensureAuthenticated` e `checkRole` (RBAC).
   - **CRUD de Contas/Usuários (`src/modules/users`):** Cadastro público (Cidadão e Profissional de Saúde com validação de conselho), consulta de perfil (`/users/me`), busca por ID, listagem paginada (ADMIN), atualização e desativação lógica.
   - **CRUD de Vacinas (`src/modules/vaccines`):** Listagem com busca textual e público-alvo, detalhes por ID com doses ordenadas, criação, atualização e desativação segura protegidas por RBAC.
-  - **CRUD de Unidades Básicas de Saúde (`src/modules/ubs`):** Listagem com cálculo geográfico de proximidade por coordenadas (Haversine), filtro por raio (km), busca por texto/bairro/cidade, detalhes por ID e gestão de UBSs.
-- **Data da Última Atualização:** 2026-10-01
+  - **CRUD de Unidades Básicas de Saúde (`src/modules/ubs`):** Listagem com cálculo geográfico de proximidade por coordenadas (Haversine validado com 36 UBSs), filtro por raio (km), busca por texto/bairro/cidade, detalhes por ID e gestão de UBSs.
+- **Data da Última Atualização:** 2026-10-07
 
 ---
 
