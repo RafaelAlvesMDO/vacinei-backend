@@ -1,7 +1,14 @@
 import { Request, Response } from 'express';
-import { loginSchema, refreshTokenSchema } from '../dtos/auth.dto';
+import {
+  loginSchema,
+  refreshTokenSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from '../dtos/auth.dto';
 import { AuthenticateUserService } from '../services/AuthenticateUserService';
 import { RefreshTokenService } from '../services/RefreshTokenService';
+import { ForgotPasswordService } from '../services/ForgotPasswordService';
+import { ResetPasswordService } from '../services/ResetPasswordService';
 import { prisma } from '../../../config/prisma';
 import { AppError } from '../../../errors/AppError';
 
@@ -27,6 +34,31 @@ export class AuthController {
     return res.status(200).json({
       status: 'success',
       data: result,
+    });
+  }
+
+  async forgotPassword(req: Request, res: Response): Promise<Response> {
+    const validatedData = forgotPasswordSchema.parse(req.body);
+
+    const forgotPasswordService = new ForgotPasswordService();
+    await forgotPasswordService.execute(validatedData);
+
+    // Resposta sempre igual para não permitir enumeração de contas
+    return res.status(200).json({
+      status: 'success',
+      message: 'Se o e-mail estiver cadastrado, você receberá um código de recuperação.',
+    });
+  }
+
+  async resetPassword(req: Request, res: Response): Promise<Response> {
+    const validatedData = resetPasswordSchema.parse(req.body);
+
+    const resetPasswordService = new ResetPasswordService();
+    await resetPasswordService.execute(validatedData);
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Senha redefinida com sucesso.',
     });
   }
 
