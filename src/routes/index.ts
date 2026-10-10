@@ -3,6 +3,11 @@ import { authRoutes } from '../modules/auth/routes/auth.routes';
 import { userRoutes } from '../modules/users/routes/user.routes';
 import { vaccineRoutes } from '../modules/vaccines/routes/vaccine.routes';
 import { ubsRoutes } from '../modules/ubs/routes/ubs.routes';
+import { citizenRoutes } from '../modules/users/routes/citizen.routes';
+import {
+  vaccinationRecordRoutes,
+  citizenVaccinationRecordRoutes,
+} from '../modules/vaccination-records/routes/vaccination-record.routes';
 
 const routes = Router();
 
@@ -30,5 +35,8 @@ routes.use('/auth', authRoutes);
 routes.use('/users', userRoutes);
 routes.use('/vaccines', vaccineRoutes);
 routes.use('/ubs', ubsRoutes);
+routes.use('/citizens', citizenRoutes);
+routes.use('/citizens', citizenVaccinationRecordRoutes);
+routes.use('/vaccination-records', vaccinationRecordRoutes);
 
 export { routes };
