@@ -10,6 +10,7 @@ const recordSelect = {
   status: true,
   origin: true,
   applicationDate: true,
+  confirmedAt: true,
   lotNumber: true,
   createdAt: true,
   updatedAt: true,
@@ -27,8 +28,9 @@ const recordSelect = {
 export class ConfirmVaccinationService {
   /**
    * Confirmação presencial de dose (RF010). O profissional responsável vem
-   * sempre da sessão (RS006) e a data de aplicação é sempre a atual.
-   * Se a dose já existir com registro manual/OCR, ela é promovida a CONFIRMADO (RF007 nota 7).
+   * sempre da sessão (RS006) e a data da confirmação é gravada em confirmedAt.
+   * Se a dose já existir com registro manual/OCR, ela é promovida a CONFIRMADO (RF007 nota 7)
+   * mantendo a applicationDate original; registros novos recebem applicationDate = confirmedAt.
    */
   async execute(professionalId: string, { citizenId, vaccineId, doseId, lote }: ConfirmVaccinationDTO) {
     const citizen = await prisma.user.findFirst({
@@ -58,7 +60,7 @@ export class ConfirmVaccinationService {
     const existingRecords = await prisma.vaccinationRecord.findMany({
       where: { userId: citizenId, dependentId: null, doseId },
       orderBy: { createdAt: 'asc' },
-      select: { id: true, status: true },
+      select: { id: true, status: true, applicationDate: true },
     });
 
     if (existingRecords.some((record) => record.status === VaccineStatus.CONFIRMADO)) {
@@ -67,9 +69,11 @@ export class ConfirmVaccinationService {
 
     const existingRecord = existingRecords[0];
 
+    const now = new Date();
+
     const confirmationData = {
       status: VaccineStatus.CONFIRMADO,
-      applicationDate: new Date(),
+      confirmedAt: now,
       lotNumber: lote,
       appliedById: professionalId,
     };
@@ -77,12 +81,14 @@ export class ConfirmVaccinationService {
     const record = existingRecord
       ? await prisma.vaccinationRecord.update({
           where: { id: existingRecord.id },
-          data: confirmationData,
+          // Sem data original, a dose passa a ter a data da confirmação
+          data: { ...confirmationData, applicationDate: existingRecord.applicationDate ?? now },
           select: recordSelect,
         })
       : await prisma.vaccinationRecord.create({
           data: {
             ...confirmationData,
+            applicationDate: now,
             userId: citizenId,
             doseId,
             origin: RecordOrigin.SISTEMA_PRESENCIAL,

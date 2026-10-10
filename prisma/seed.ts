@@ -932,11 +932,14 @@ async function main() {
             ? RecordOrigin.MANUAL
             : RecordOrigin.OCR_ICR;
 
+        const applicationDate = daysAgo(Math.max(days - shift, 1));
+
         await prisma.vaccinationRecord.create({
           data: {
             userId: created.id,
             doseId: doses[doseIdx].id,
-            applicationDate: daysAgo(Math.max(days - shift, 1)),
+            applicationDate,
+            confirmedAt: isPresencial ? applicationDate : null,
             status: isPresencial ? VaccineStatus.CONFIRMADO : VaccineStatus.EM_DIA,
             origin,
             ocrConfidence: origin === RecordOrigin.OCR_ICR ? 0.82 + (recordIndex % 3) * 0.05 : null,

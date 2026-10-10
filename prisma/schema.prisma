@@ -196,6 +196,7 @@ model VaccinationRecord {
   doseId          String        @map("dose_id")
   status          VaccineStatus @default(EM_DIA)
   applicationDate DateTime?     @map("application_date")
+  confirmedAt     DateTime?     @map("confirmed_at") // Confirmação presencial pelo profissional (RF010)
   expectedDate    DateTime?     @map("expected_date")
   lotNumber       String?       @map("lot_number")
   manufacturer    String?
