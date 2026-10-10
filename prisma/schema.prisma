@@ -109,13 +109,14 @@ model RefreshToken {
 }
 
 model PasswordResetCode {
-  id        String   @id @default(uuid())
-  code      String   // Código de 6 dígitos
-  userId    String   @map("user_id")
-  attempts  Int      @default(0)
-  isUsed    Boolean  @default(false) @map("is_used")
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
+  id           String    @id @default(uuid())
+  code         String    // Hash SHA-256 do código de 6 dígitos
+  userId       String    @map("user_id")
+  attempts     Int       @default(0)
+  isUsed       Boolean   @default(false) @map("is_used")
+  blockedUntil DateTime? @map("blocked_until") // Bloqueio de 15 min após 3 tentativas erradas
+  expiresAt    DateTime  @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
