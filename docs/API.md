@@ -84,13 +84,13 @@ Senha de todos: **`Vacinei@2026`**
 ## Users (`/users`)
 
 ### POST `/users` (cadastro)
-- **Acesso:** Público. Token opcional: com token de ADMIN, também é possível criar outro ADMIN.
+- **Acesso:** Público. Token opcional: com token de ADMIN, também é possível criar outro ADMIN, e o profissional criado já nasce verificado.
 - **Body:** `{ name, email, password, cpf?, phone?, birthDate?, role?, professionalRegistry? }`
   - `password`: segue a regra de senha.
   - `birthDate`: `YYYY-MM-DD` ou ISO.
   - `role`: `CIDADAO` (padrão) ou `PROFISSIONAL_SAUDE`. `ADMIN` só com token de ADMIN.
   - `professionalRegistry`: `{ council, registryNumber, uf }`, obrigatório para `PROFISSIONAL_SAUDE`.
-- **201:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, professionalRegistry }`. O profissional nasce com `isVerified = false` e fica pendente de verificação pelo admin.
+- **201:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, professionalRegistry }`. O profissional criado no cadastro público nasce com `isVerified = false` e fica pendente de verificação pelo admin. Se quem cria é um ADMIN, ele nasce com `isVerified = true`, `verifiedAt` = agora e `verifiedById` = id do admin.
 - **Erros:**
   - `400`: validação, inclusive senha fraca.
   - `401`: token enviado, mas inválido.
@@ -228,13 +228,13 @@ Objeto `Professional`:
 - **Erros:** `404`.
 
 ### POST `/vaccines`
-- **Acesso:** ADMIN ou PROFISSIONAL_SAUDE
+- **Acesso:** ADMIN
 - **Body:** `{ name, description?, targetAudience?, targetDisease, dosesCount, doses?: [{ doseNumber, doseName, recommendedAgeMonths?, intervalDaysFromPrevious?, description? }] }`
 - **201:** `data: Vaccine`
 - **Erros:** `400`, `401`, `403`, `409` (nome duplicado).
 
 ### PUT `/vaccines/:id`
-- **Acesso:** ADMIN ou PROFISSIONAL_SAUDE
+- **Acesso:** ADMIN
 - **Body:** campos opcionais `{ name?, description?, targetAudience?, targetDisease?, dosesCount?, isActive? }`
 - **200:** `data: Vaccine`
 - **Erros:** `400`, `401`, `403`, `404`, `409`.
@@ -260,13 +260,13 @@ Objeto `Professional`:
 - **Erros:** `404`.
 
 ### POST `/ubs`
-- **Acesso:** ADMIN ou PROFISSIONAL_SAUDE
+- **Acesso:** ADMIN
 - **Body:** `{ name, address, city, state (UF), latitude, longitude, cnes?, neighborhood?, zipCode?, phone?, openingHours? }`
 - **201:** `data: Ubs`
 - **Erros:** `400`, `401`, `403`, `409` (CNES duplicado).
 
 ### PUT `/ubs/:id`
-- **Acesso:** ADMIN ou PROFISSIONAL_SAUDE
+- **Acesso:** ADMIN
 - **Body:** os mesmos campos do POST, todos opcionais, mais `isActive?`.
 - **200:** `data: Ubs`
 - **Erros:** `400`, `401`, `403`, `404`, `409`.

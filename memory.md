@@ -67,7 +67,8 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 9. **Senha Forte, Cadastro de ADMIN e Verificação de Profissionais (2026-10-10):**
    - Regra de senha do RF001 (mín. 8, maiúscula, minúscula, número e símbolo) centralizada em `src/utils/passwordSchema.ts`, aplicada em `POST /users` e `POST /auth/reset-password`. O login segue aceitando qualquer senha não vazia (contas antigas).
    - `POST /users` usa `optionalAuthenticated`: o cadastro público só cria `CIDADAO`/`PROFISSIONAL_SAUDE`; `ADMIN` exige token de ADMIN (403 caso contrário). O seed continua criando o admin direto no banco.
-   - Profissional cadastrado nasce com `isVerified = false` (antes era pré-verificado para demo); a verificação é manual em `/professionals`.
+   - Profissional do cadastro público nasce com `isVerified = false` (antes era pré-verificado para demo) e é verificado manualmente em `/professionals`. Criado por ADMIN, já nasce verificado (`verifiedAt` = agora, `verifiedById` = admin).
+   - Escrita (POST/PUT/DELETE) em `/vaccines` e `/ubs` restrita a ADMIN (seção 2.2, item 4 da 2.3 e RF008 nota 8). GETs seguem públicos.
    - `ProfessionalRegistry` ganhou `verifiedById`, `rejectedAt`, `rejectedById` e `rejectionReason` (migration `20261010234205_add_verification_audit_to_professional_registry`).
    - **Recusa mantém a conta ativa e não verificada:** o `ensureVerifiedProfessional` já bloqueia as ações clínicas e o profissional pode ser verificado depois. Recusar um profissional já verificado revoga a verificação. Bloqueio total fica a cargo de `DELETE /users/:id`.
 
@@ -98,7 +99,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - `POST /auth/reset-password`: Valida código (3 tentativas, bloqueio de 15 min), redefine a senha e revoga sessões.
 
 ### 4.2. Usuários / Contas (`/users`)
-- `POST /users`: Cadastro de cidadão ou profissional de saúde (com CRM/COREN, nasce não verificado). `ADMIN` só com token de ADMIN.
+- `POST /users`: Cadastro de cidadão ou profissional de saúde (com CRM/COREN; pendente no cadastro público, verificado se criado por ADMIN). `ADMIN` só com token de ADMIN.
 - `GET /users/me`: Perfil do próprio usuário logado.
 - `PUT /users/me`: Atualização cadastral do próprio usuário.
 - `DELETE /users/me`: Desativação da própria conta com revogação de sessões ativas.
@@ -110,15 +111,15 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 ### 4.3. Vacinas e Doses (`/vaccines`)
 - `GET /vaccines`: Consulta pública de vacinas do Calendário SUS com suas doses (filtros: `targetAudience`, `search`).
 - `GET /vaccines/:id`: Detalhes de uma vacina específica com doses ordenadas.
-- `POST /vaccines`: Cadastro de nova vacina e doses (`ADMIN`, `PROFISSIONAL_SAUDE`).
-- `PUT /vaccines/:id`: Atualização de informações de vacina (`ADMIN`, `PROFISSIONAL_SAUDE`).
+- `POST /vaccines`: Cadastro de nova vacina e doses (`ADMIN`).
+- `PUT /vaccines/:id`: Atualização de informações de vacina (`ADMIN`).
 - `DELETE /vaccines/:id`: Remoção/desativação de vacina (`ADMIN`).
 
 ### 4.4. Unidades Básicas de Saúde (`/ubs`)
 - `GET /ubs`: Listagem de UBSs com suporte a filtros (`city`, `state`, `search`) e cálculo de proximidade (`latitude`, `longitude`, `radiusKm`).
 - `GET /ubs/:id`: Detalhes de uma UBS com contagem de atendimentos e campanhas.
-- `POST /ubs`: Cadastro de UBS (`ADMIN`, `PROFISSIONAL_SAUDE`).
-- `PUT /ubs/:id`: Edição de UBS (`ADMIN`, `PROFISSIONAL_SAUDE`).
+- `POST /ubs`: Cadastro de UBS (`ADMIN`).
+- `PUT /ubs/:id`: Edição de UBS (`ADMIN`).
 - `DELETE /ubs/:id`: Remoção/desativação de UBS (`ADMIN`).
 
 ### 4.5. Caderneta e Confirmação Presencial (`/vaccination-records`, `/citizens`)
@@ -147,7 +148,7 @@ Contrato completo de todos os endpoints: `docs/API.md`.
 - [x] **Infraestrutura de Autenticação e Segurança:** JWT, Refresh Tokens, senhas com bcrypt e middlewares RBAC.
 - [x] **Recuperação de Senha:** `forgot-password`/`reset-password` com código por e-mail (Nodemailer ou console), tentativas e bloqueio.
 - [x] **CRUD de Contas/Utilizadores:** Cadastro público, autenticação, perfis e gerenciamento.
-- [x] **CRUD de Vacinas:** Consulta do catálogo SUS com doses e gestão por profissionais/admins.
+- [x] **CRUD de Vacinas:** Consulta do catálogo SUS com doses e gestão restrita a ADMIN (RF008).
 - [x] **CRUD de Unidades Básicas de Saúde (UBSs):** Consulta, cadastro e cálculo geográfico por proximidade.
 - [ ] **Módulo de Dependentes (`src/modules/dependents`):** Cadastro e listagem de dependentes (filhos/tutelados) vinculados ao responsável (RS008).
 - [x] **Módulo de Caderneta e Registro de Aplicações (`src/modules/vaccination-records`):** Registro de aplicação presencial por profissional (RS006/RF010) e cálculo dos status da caderneta (`EM_DIA`, `ATRASADA`, `COMPLETA`).
