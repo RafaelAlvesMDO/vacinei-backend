@@ -15,6 +15,8 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
   - **CRUD de Unidades Básicas de Saúde (`src/modules/ubs`):** Listagem com cálculo geográfico de proximidade por coordenadas (Haversine validado com 36 UBSs), filtro por raio (km), busca por texto/bairro/cidade, detalhes por ID e gestão de UBSs.
   - **Caderneta e Confirmação Presencial (`src/modules/vaccination-records`):** cálculo de status por vacina (`EM_DIA`/`ATRASADA`/`COMPLETA`), confirmação de dose por profissional verificado (RF010/RS006), caderneta do cidadão (RF006) e busca de cidadão sem acentos (`/citizens`). Registros vinculados só ao próprio cidadão (`dependentId = null`); dependentes ficam para depois.
   - **Dashboard do Profissional (`src/modules/dashboard`, RF009/RS005):** resumo (cadernetas, vacinas registradas, doses atrasadas), últimas doses e série mensal de 12 meses, restritos a profissional verificado.
+  - **Verificação de Profissionais (`src/modules/professionals`, RS001):** listagem por status, aprovação e recusa manual pelo ADMIN, com auditoria de quem decidiu e quando.
+  - **Contrato da API:** `docs/API.md` com todos os endpoints, perfis de acesso, bodies, respostas, erros e logins do seed.
   - **Seed com dados de dashboard:** 25 cidadãos (`cidadao01..25@vacinei.com.br`), 142 registros nos últimos 12 meses com mistura de em dia, atrasados e completos; profissional não verificado `paulo.ribeiro@vacinei.com.br` para testar o 403. Senha de todos: `Vacinei@2026` (RF001).
 - **Data da Última Atualização:** 2026-10-10
 
@@ -62,6 +64,13 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
    - A série mensal agrupa pela `applicationDate` no fuso `America/Maceio` via `generate_series` (meses sem registro retornam 0).
    - **Pendência:** as métricas do dashboard consideram só cidadãos ativos (`dependentId = null`). Os registros de dependentes devem entrar nas métricas quando o RF012 for implementado.
 
+9. **Senha Forte, Cadastro de ADMIN e Verificação de Profissionais (2026-10-10):**
+   - Regra de senha do RF001 (mín. 8, maiúscula, minúscula, número e símbolo) centralizada em `src/utils/passwordSchema.ts`, aplicada em `POST /users` e `POST /auth/reset-password`. O login segue aceitando qualquer senha não vazia (contas antigas).
+   - `POST /users` usa `optionalAuthenticated`: o cadastro público só cria `CIDADAO`/`PROFISSIONAL_SAUDE`; `ADMIN` exige token de ADMIN (403 caso contrário). O seed continua criando o admin direto no banco.
+   - Profissional cadastrado nasce com `isVerified = false` (antes era pré-verificado para demo); a verificação é manual em `/professionals`.
+   - `ProfessionalRegistry` ganhou `verifiedById`, `rejectedAt`, `rejectedById` e `rejectionReason` (migration `20261010234205_add_verification_audit_to_professional_registry`).
+   - **Recusa mantém a conta ativa e não verificada:** o `ensureVerifiedProfessional` já bloqueia as ações clínicas e o profissional pode ser verificado depois. Recusar um profissional já verificado revoga a verificação. Bloqueio total fica a cargo de `DELETE /users/:id`.
+
 ---
 
 ## 3. Entidades Modeladas no Prisma (`prisma/schema.prisma`)
@@ -89,7 +98,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - `POST /auth/reset-password`: Valida código (3 tentativas, bloqueio de 15 min), redefine a senha e revoga sessões.
 
 ### 4.2. Usuários / Contas (`/users`)
-- `POST /users`: Cadastro de cidadão ou profissional de saúde (com CRM/COREN).
+- `POST /users`: Cadastro de cidadão ou profissional de saúde (com CRM/COREN, nasce não verificado). `ADMIN` só com token de ADMIN.
 - `GET /users/me`: Perfil do próprio usuário logado.
 - `PUT /users/me`: Atualização cadastral do próprio usuário.
 - `DELETE /users/me`: Desativação da própria conta com revogação de sessões ativas.
@@ -122,6 +131,13 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - `GET /dashboard/recent-doses?limit=10`: Últimas doses (1 a 50) com cidadão, vacina, dose, data e status do registro.
 - `GET /dashboard/monthly`: Vacinas aplicadas por mês nos últimos 12 meses, incluindo meses com zero.
 
+### 4.7. Verificação de Profissionais (`/professionals`, ADMIN)
+- `GET /professionals?verified=false`: Profissionais com nome, e-mail, categoria (conselho), registro, data de cadastro e `verificationStatus` (`PENDENTE`/`VERIFICADO`/`RECUSADO`).
+- `PATCH /professionals/:id/verify`: Verifica o registro, gravando `verifiedAt` e `verifiedBy`; 409 se já verificado.
+- `PATCH /professionals/:id/reject`: Recusa com `reason` opcional; a conta segue ativa e não verificada; 409 se já recusado.
+
+Contrato completo de todos os endpoints: `docs/API.md`.
+
 ---
 
 ## 5. Roteiro para Apresentação da Pré-Banca (Até 15/Outubro/2026)
@@ -136,4 +152,5 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - [ ] **Módulo de Dependentes (`src/modules/dependents`):** Cadastro e listagem de dependentes (filhos/tutelados) vinculados ao responsável (RS008).
 - [x] **Módulo de Caderneta e Registro de Aplicações (`src/modules/vaccination-records`):** Registro de aplicação presencial por profissional (RS006/RF010) e cálculo dos status da caderneta (`EM_DIA`, `ATRASADA`, `COMPLETA`).
 - [x] **Dashboard do Profissional (`src/modules/dashboard`):** Indicadores, últimas doses e série mensal (RF009/RS005). Dependentes entram com o RF012.
-- [ ] **Coleção de Requisições / Documentação de Teste:** Criar documentação clara de chamadas HTTP (Insomnia/Postman/cURL) para demonstrar na banca.
+- [x] **Verificação de Profissionais (`src/modules/professionals`):** Aprovação/recusa manual pelo ADMIN (RS001).
+- [ ] **Coleção de Requisições / Documentação de Teste:** Contrato pronto em `docs/API.md`; falta a coleção Insomnia/Postman/cURL para demonstrar na banca.
