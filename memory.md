@@ -13,7 +13,9 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
   - **CRUD de Contas/Usuários (`src/modules/users`):** Cadastro público (Cidadão e Profissional de Saúde com validação de conselho), consulta de perfil (`/users/me`), busca por ID, listagem paginada (ADMIN), atualização e desativação lógica.
   - **CRUD de Vacinas (`src/modules/vaccines`):** Listagem com busca textual e público-alvo, detalhes por ID com doses ordenadas, criação, atualização e desativação segura protegidas por RBAC.
   - **CRUD de Unidades Básicas de Saúde (`src/modules/ubs`):** Listagem com cálculo geográfico de proximidade por coordenadas (Haversine validado com 36 UBSs), filtro por raio (km), busca por texto/bairro/cidade, detalhes por ID e gestão de UBSs.
-- **Data da Última Atualização:** 2026-10-07
+  - **Caderneta e Confirmação Presencial (`src/modules/vaccination-records`):** cálculo de status por vacina (`EM_DIA`/`ATRASADA`/`COMPLETA`), confirmação de dose por profissional verificado (RF010/RS006), caderneta do cidadão (RF006) e busca de cidadão sem acentos (`/citizens`). Registros vinculados só ao próprio cidadão (`dependentId = null`); dependentes ficam para depois.
+  - **Seed com dados de dashboard:** 25 cidadãos (`cidadao01..25@vacinei.com.br`), 142 registros nos últimos 12 meses com mistura de em dia, atrasados e completos; profissional não verificado `paulo.ribeiro@vacinei.com.br` para testar o 403. Senha de todos: `Vacinei@2026` (RF001).
+- **Data da Última Atualização:** 2026-10-10
 
 ---
 
@@ -45,6 +47,13 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
    - Adoção estrita da convenção Conventional Commits (`tipo(escopo): descrição concisa`) com mensagens em português do Brasil.
    - Tipos permitidos: `feat`, `fix`, `docs`, `style`, `refactor`.
    - Fluxo padronizado via skill (`.claude/skills/git_commit`): trabalho e commits sempre na branch `dev` -> `git push origin dev`. Nunca commitar/mergear/push na `main`; PR `dev` -> `main` só a pedido do autor (decisão de 2026-10-10).
+
+7. **Motor de Status Vacinal (2026-10-10):**
+   - Função pura `calculateVaccineStatus` (`vaccination-records/services/CalculateVaccineStatusService.ts`), sem acesso ao banco, para reuso pelo motor de alertas (RF007). Próxima dose = última aplicação + `intervalDaysFromPrevious`; sem intervalo, nascimento + `recommendedAgeMonths`. `ATRASADA` quando a data prevista já passou.
+   - O status calculado (`EM_DIA`/`ATRASADA`/`COMPLETA`) não é persistido: é derivado por vacina a cada consulta. O campo `status` do registro só distingue `CONFIRMADO` (presencial) dos registros manuais/OCR.
+   - A caderneta lista só vacinas com ao menos um registro (evita marcar adultos como atrasados em vacinas infantis).
+   - Acesso a profissional verificado via middleware `ensureVerifiedProfessional` (consulta `professionalRegistry.isVerified` no banco a cada requisição).
+   - Busca sem acentos usa a extensão PostgreSQL `unaccent` (migration `20261010231422_enable_unaccent_extension`).
 
 ---
 
@@ -96,6 +105,11 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - `PUT /ubs/:id`: Edição de UBS (`ADMIN`, `PROFISSIONAL_SAUDE`).
 - `DELETE /ubs/:id`: Remoção/desativação de UBS (`ADMIN`).
 
+### 4.5. Caderneta e Confirmação Presencial (`/vaccination-records`, `/citizens`)
+- `POST /vaccination-records/confirm`: Confirmação presencial de dose (profissional verificado). Data = agora, profissional = sessão. Cria registro `SISTEMA_PRESENCIAL`/`CONFIRMADO` ou promove registro manual/OCR existente a `CONFIRMADO` (RF007 nota 7); 409 se já confirmado.
+- `GET /citizens?search=`: Busca de cidadão por nome via `unaccent` + `ILIKE` (profissional verificado), CPF mascarado, até 20 resultados.
+- `GET /citizens/:id/vaccination-records`: Caderneta agrupada por vacina com status calculado (titular ou profissional verificado).
+
 ---
 
 ## 5. Roteiro para Apresentação da Pré-Banca (Até 15/Outubro/2026)
@@ -108,5 +122,5 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - [x] **CRUD de Vacinas:** Consulta do catálogo SUS com doses e gestão por profissionais/admins.
 - [x] **CRUD de Unidades Básicas de Saúde (UBSs):** Consulta, cadastro e cálculo geográfico por proximidade.
 - [ ] **Módulo de Dependentes (`src/modules/dependents`):** Cadastro e listagem de dependentes (filhos/tutelados) vinculados ao responsável (RS008).
-- [ ] **Módulo de Caderneta e Registro de Aplicações (`src/modules/vaccination-records`):** Registro de aplicação presencial por profissional (RS006/RF010) e cálculo dos status da caderneta (`EM_DIA`, `ATRASADA`, `COMPLETA`).
+- [x] **Módulo de Caderneta e Registro de Aplicações (`src/modules/vaccination-records`):** Registro de aplicação presencial por profissional (RS006/RF010) e cálculo dos status da caderneta (`EM_DIA`, `ATRASADA`, `COMPLETA`).
 - [ ] **Coleção de Requisições / Documentação de Teste:** Criar documentação clara de chamadas HTTP (Insomnia/Postman/cURL) para demonstrar na banca.
