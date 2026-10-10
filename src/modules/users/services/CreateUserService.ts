@@ -13,8 +13,10 @@ export class CreateUserService {
   async execute(data: CreateUserDTO, requester?: IRequester) {
     const { name, email, password, cpf, phone, birthDate, role, professionalRegistry } = data;
 
+    const isCreatedByAdmin = requester?.role === UserRole.ADMIN;
+
     // Cadastro público só cria CIDADAO e PROFISSIONAL_SAUDE; ADMIN apenas por outro admin
-    if (role === UserRole.ADMIN && requester?.role !== UserRole.ADMIN) {
+    if (role === UserRole.ADMIN && !isCreatedByAdmin) {
       throw new AppError('Apenas administradores podem criar contas de administrador.', 403);
     }
 
@@ -75,8 +77,10 @@ export class CreateUserService {
                   council: professionalRegistry.council.toUpperCase(),
                   registryNumber: professionalRegistry.registryNumber,
                   uf: professionalRegistry.uf.toUpperCase(),
-                  // Nasce pendente: a verificação é manual pelo admin (RS001)
-                  isVerified: false,
+                  // Cadastro público nasce pendente (RS001); criado por ADMIN já nasce verificado
+                  ...(isCreatedByAdmin
+                    ? { isVerified: true, verifiedAt: new Date(), verifiedById: requester.id }
+                    : { isVerified: false }),
                 },
               },
             }
