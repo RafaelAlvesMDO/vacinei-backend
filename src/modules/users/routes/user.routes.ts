@@ -3,12 +3,13 @@ import { UserRole } from '@prisma/client';
 import { UserController } from '../controllers/UserController';
 import { ensureAuthenticated } from '../../../middlewares/ensureAuthenticated';
 import { checkRole } from '../../../middlewares/checkRole';
+import { optionalAuthenticated } from '../../../middlewares/optionalAuthenticated';
 
 export const userRoutes = Router();
 const userController = new UserController();
 
-// Cadastro público (Sign-up)
-userRoutes.post('/', userController.create);
+// Cadastro público (Sign-up); com token de ADMIN também permite criar administradores
+userRoutes.post('/', optionalAuthenticated, userController.create);
 
 // Rotas autenticadas do usuário logado
 userRoutes.get('/me', ensureAuthenticated, userController.show);

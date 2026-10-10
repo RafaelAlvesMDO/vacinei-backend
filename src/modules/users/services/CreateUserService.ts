@@ -1,11 +1,22 @@
 import bcrypt from 'bcryptjs';
+import { UserRole } from '@prisma/client';
 import { prisma } from '../../../config/prisma';
 import { AppError } from '../../../errors/AppError';
 import { CreateUserDTO } from '../dtos/user.dto';
 
+interface IRequester {
+  id: string;
+  role: UserRole;
+}
+
 export class CreateUserService {
-  async execute(data: CreateUserDTO) {
+  async execute(data: CreateUserDTO, requester?: IRequester) {
     const { name, email, password, cpf, phone, birthDate, role, professionalRegistry } = data;
+
+    // Cadastro público só cria CIDADAO e PROFISSIONAL_SAUDE; ADMIN apenas por outro admin
+    if (role === UserRole.ADMIN && requester?.role !== UserRole.ADMIN) {
+      throw new AppError('Apenas administradores podem criar contas de administrador.', 403);
+    }
 
     // 1. Verifica duplicidade de e-mail
     const emailAlreadyInUse = await prisma.user.findUnique({
