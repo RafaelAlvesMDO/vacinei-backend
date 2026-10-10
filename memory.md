@@ -32,6 +32,8 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
    - **JWT (Access Token) + Refresh Tokens:** Tokens de acesso de 15 min e refresh tokens opacos com rotação persistidos na tabela `refresh_tokens`.
    - **Perfis de Acesso:** `CIDADAO`, `PROFISSIONAL_SAUDE` e `ADMIN`.
    - **Validação de Registro Profissional (RS001):** Tabela `professional_registries` com unicidade composta `[council, registryNumber, uf]`.
+   - **Recuperação de Senha (2026-10-10):** Código de 6 dígitos (`crypto.randomInt`) salvo apenas como hash SHA-256, validade de 10 min; novo pedido invalida códigos anteriores. 3 erros bloqueiam por 15 min via `blockedUntil` e invalidam o código; durante o bloqueio, `forgot-password` não gera novo código (evita burlar o bloqueio). Reset bem-sucedido troca a senha e revoga todos os refresh tokens em transação. `forgot-password` sempre retorna a mesma resposta (anti-enumeração).
+   - **MailProvider (`src/providers/MailProvider`):** Nodemailer configurado por `SMTP_*`/`MAIL_FROM`; sem SMTP configurado, o e-mail é exibido no console (modo de teste local).
 
 4. **Geolocalização (UBSs):**
    - Cálculo de distâncias em quilômetros via fórmula matemática de Haversine (`src/utils/distance.ts`) na camada de serviço, ordenando postos de saúde da mais próxima à mais distante.
@@ -51,7 +53,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - `User`: Usuários do sistema (cidadãos, profissionais e admins) com hash de senha, CPF único e controle ativo.
 - `ProfessionalRegistry`: Dados do conselho de classe (CRM, COREN, etc.) vinculados 1:1 ao profissional de saúde.
 - `RefreshToken`: Tokens de atualização para ciclo de autenticação seguro.
-- `PasswordResetCode`: Códigos de redefinição de senha com controle de expiração e tentativas.
+- `PasswordResetCode`: Códigos de redefinição de senha (hash) com controle de expiração, tentativas e bloqueio (`blockedUntil`, migration `20261010220933_add_blocked_until_to_password_reset_code`).
 - `Dependent`: Dependentes vinculados a um responsável, com unicidade `[name, birthDate]` (RS008).
 - `Vaccine` e `Dose`: Catálogo do Calendário Nacional de Vacinação (doenças-alvo, faixas etárias e intervalos).
 - `VaccinationRecord`: Histórico e caderneta de vacinas do cidadão/dependente, rastreabilidade do profissional aplicador (`appliedById` - RS006/RF010), UBS de aplicação e status vacinal.
@@ -67,6 +69,8 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - `POST /auth/login`: Autentica usuário com e-mail/senha, retornando access token JWT e refresh token.
 - `POST /auth/refresh`: Realiza a rotação do refresh token e emite novo access token.
 - `GET /auth/me`: Retorna perfil completo e dependentes do usuário autenticado.
+- `POST /auth/forgot-password`: Gera e envia por e-mail código de recuperação (resposta sempre genérica).
+- `POST /auth/reset-password`: Valida código (3 tentativas, bloqueio de 15 min), redefine a senha e revoga sessões.
 
 ### 4.2. Usuários / Contas (`/users`)
 - `POST /users`: Cadastro de cidadão ou profissional de saúde (com CRM/COREN).
@@ -99,6 +103,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - [x] **Setup do Banco e Migrations:** PostgreSQL ativo via Docker e migration inicial aplicada (`20261001031748_init`).
 - [x] **Script de Seeds (`prisma/seed.ts`):** 12 vacinas do SUS, 5 UBSs de Maceió e 3 perfis de usuários cadastrados.
 - [x] **Infraestrutura de Autenticação e Segurança:** JWT, Refresh Tokens, senhas com bcrypt e middlewares RBAC.
+- [x] **Recuperação de Senha:** `forgot-password`/`reset-password` com código por e-mail (Nodemailer ou console), tentativas e bloqueio.
 - [x] **CRUD de Contas/Utilizadores:** Cadastro público, autenticação, perfis e gerenciamento.
 - [x] **CRUD de Vacinas:** Consulta do catálogo SUS com doses e gestão por profissionais/admins.
 - [x] **CRUD de Unidades Básicas de Saúde (UBSs):** Consulta, cadastro e cálculo geográfico por proximidade.
