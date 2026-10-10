@@ -67,6 +67,8 @@ model User {
 
   // Relações
   professionalRegistry ProfessionalRegistry?
+  verifiedRegistries   ProfessionalRegistry[] @relation("RegistryVerifiedBy")
+  rejectedRegistries   ProfessionalRegistry[] @relation("RegistryRejectedBy")
   dependents           Dependent[]
   vaccinationRecords   VaccinationRecord[]    @relation("CitizenVaccines")
   appliedRecords       VaccinationRecord[]    @relation("AppliedVaccines")
@@ -86,10 +88,17 @@ model ProfessionalRegistry {
   uf             String    // Sigla do estado (ex: AL, SP)
   isVerified     Boolean   @default(false) @map("is_verified")
   verifiedAt     DateTime? @map("verified_at")
+  verifiedById   String?   @map("verified_by_id")
+  // Recusa da verificação (RS001): conta segue ativa, porém não verificada
+  rejectedAt      DateTime? @map("rejected_at")
+  rejectedById    String?   @map("rejected_by_id")
+  rejectionReason String?   @map("rejection_reason")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verifiedBy User? @relation("RegistryVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+  rejectedBy User? @relation("RegistryRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
 
   @@unique([council, registryNumber, uf])
   @@map("professional_registries")

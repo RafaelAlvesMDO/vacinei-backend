@@ -75,8 +75,8 @@ export class CreateUserService {
                   council: professionalRegistry.council.toUpperCase(),
                   registryNumber: professionalRegistry.registryNumber,
                   uf: professionalRegistry.uf.toUpperCase(),
-                  isVerified: true, // Pré-validado para fins de desenvolvimento/apresentação
-                  verifiedAt: new Date(),
+                  // Nasce pendente: a verificação é manual pelo admin (RS001)
+                  isVerified: false,
                 },
               },
             }

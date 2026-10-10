@@ -179,6 +179,7 @@ async function main() {
           uf: 'AL',
           isVerified: true,
           verifiedAt: new Date(),
+          verifiedById: admin.id,
         },
       },
     },
