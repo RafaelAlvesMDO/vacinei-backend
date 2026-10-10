@@ -1,7 +1,131 @@
-import { PrismaClient, UserRole, TargetAudience } from '@prisma/client';
+import { PrismaClient, UserRole, TargetAudience, RecordOrigin, VaccineStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
+
+// Senha padrão de todos os usuários de teste (atende à regra de senha do RF001)
+const DEFAULT_PASSWORD = 'Vacinei@2026';
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+function daysAgo(days: number): Date {
+  const date = new Date(Date.now() - days * DAY_IN_MS);
+  date.setUTCHours(13, 0, 0, 0);
+  return date;
+}
+
+// Perfis de caderneta: dias atrás de cada dose aplicada, em ordem de dose.
+// Datas relativas a hoje mantêm o status coerente sempre que o seed roda.
+type VaccinationProfile = {
+  bornDaysAgo?: number; // bebês: nascimento relativo a hoje
+  birthDate?: string; // adultos: data fixa
+  vaccines: Record<string, number[]>;
+};
+
+const PROFILES: Record<string, VaccinationProfile> = {
+  // Bebê de 7 meses com esquema em dia (Penta e Rota completas)
+  BEBE_EM_DIA: {
+    bornDaysAgo: 210,
+    vaccines: {
+      BCG: [208],
+      'Hepatite B': [208],
+      'Pentavalente (DTP/HB/Hib)': [150, 90, 28],
+      'Poliomielite Inativada (VIP)': [150, 90, 28],
+      'Pneumocócica 10-Valente': [150, 90],
+      'Rotavírus Humano (VRH)': [150, 90],
+      'Meningocócica C Conjugada': [120, 60],
+    },
+  },
+  // Bebê de 10 meses que tomou só a 1ª dose e não voltou
+  BEBE_ATRASADO: {
+    bornDaysAgo: 300,
+    vaccines: {
+      BCG: [298],
+      'Hepatite B': [298],
+      'Pentavalente (DTP/HB/Hib)': [240],
+      'Poliomielite Inativada (VIP)': [240],
+      'Rotavírus Humano (VRH)': [240],
+      'Pneumocócica 10-Valente': [240],
+    },
+  },
+  // Criança de 14 meses com esquema misto (reforço da Meningo C atrasado)
+  CRIANCA_MISTO: {
+    bornDaysAgo: 420,
+    vaccines: {
+      'Pentavalente (DTP/HB/Hib)': [360, 300, 240],
+      'Poliomielite Inativada (VIP)': [360, 300, 240],
+      'Meningocócica C Conjugada': [330, 270],
+      'Febre Amarela': [150],
+      'Tríplice Viral (SCR)': [30],
+    },
+  },
+  ADULTO_ATRASADO: {
+    birthDate: '1988-03-10',
+    vaccines: {
+      'Influenza (Gripe)': [200],
+      'Febre Amarela': [100],
+      'Tríplice Viral (SCR)': [180],
+    },
+  },
+  ADULTO_COMPLETO: {
+    birthDate: '1979-11-22',
+    vaccines: {
+      'Influenza (Gripe)': [45],
+      'Hepatite B': [300],
+      'Tríplice Viral (SCR)': [330, 220],
+    },
+  },
+  ADOLESCENTE: {
+    birthDate: '2013-06-05',
+    vaccines: {
+      'HPV Quadrivalente': [120],
+      'Tríplice Viral (SCR)': [250, 150],
+      'Influenza (Gripe)': [60],
+    },
+  },
+  GESTANTE: {
+    birthDate: '1996-01-17',
+    vaccines: {
+      'dTpa (Tríplice Acelular do Adulto)': [70],
+      'Influenza (Gripe)': [90],
+      'Hepatite B': [160],
+    },
+  },
+  IDOSO: {
+    birthDate: '1954-08-30',
+    vaccines: {
+      'Influenza (Gripe)': [10],
+      'Febre Amarela': [330],
+    },
+  },
+};
+
+const CITIZENS: { name: string; profile: keyof typeof PROFILES }[] = [
+  { name: 'Ana Beatriz Lima', profile: 'ADULTO_COMPLETO' },
+  { name: 'João Pedro Araújo', profile: 'BEBE_EM_DIA' },
+  { name: 'Maria Eduarda Santos', profile: 'BEBE_ATRASADO' },
+  { name: 'José Antônio Ferreira', profile: 'IDOSO' },
+  { name: 'Lúcia Helena Gonçalves', profile: 'GESTANTE' },
+  { name: 'Gabriel Cavalcante Melo', profile: 'CRIANCA_MISTO' },
+  { name: 'Fernanda Albuquerque', profile: 'ADULTO_ATRASADO' },
+  { name: 'Luís Otávio Barbosa', profile: 'ADOLESCENTE' },
+  { name: 'Íris Conceição Rocha', profile: 'BEBE_EM_DIA' },
+  { name: 'Sebastião Tenório', profile: 'IDOSO' },
+  { name: 'Júlia Brandão Vieira', profile: 'BEBE_ATRASADO' },
+  { name: 'Rafael Monteiro Lins', profile: 'ADULTO_COMPLETO' },
+  { name: 'Cecília Amorim', profile: 'CRIANCA_MISTO' },
+  { name: 'Thiago Wanderley', profile: 'ADULTO_ATRASADO' },
+  { name: 'Letícia Nascimento', profile: 'GESTANTE' },
+  { name: 'Heitor Calheiros', profile: 'BEBE_EM_DIA' },
+  { name: 'Valéria Pimentel', profile: 'ADULTO_COMPLETO' },
+  { name: 'Mônica Farias Duarte', profile: 'ADOLESCENTE' },
+  { name: 'Benedito Assunção', profile: 'IDOSO' },
+  { name: 'Lívia Medeiros', profile: 'BEBE_ATRASADO' },
+  { name: 'Davi Lúcio Correia', profile: 'CRIANCA_MISTO' },
+  { name: 'Patrícia Gusmão', profile: 'ADULTO_ATRASADO' },
+  { name: 'Otávio Sarmento', profile: 'ADULTO_COMPLETO' },
+  { name: 'Alícia Vasconcelos', profile: 'ADOLESCENTE' },
+  { name: 'Renê Torres Falcão', profile: 'GESTANTE' },
+];
 
 async function main() {
   console.log('🌱 Iniciando seed do banco de dados VACINEI!?...');
@@ -23,7 +147,7 @@ async function main() {
   await prisma.ubs.deleteMany();
   await prisma.user.deleteMany();
 
-  const defaultPasswordHash = await bcrypt.hash('123456', 8);
+  const defaultPasswordHash = await bcrypt.hash(DEFAULT_PASSWORD, 8);
 
   // 2. Criação dos Usuários de Teste (RBAC)
   console.log('👤 Criando usuários de teste...');
@@ -91,7 +215,30 @@ async function main() {
     },
   });
 
-  console.log(`✅ Usuários criados: Admin (${admin.email}), Profissional (${professional.email}), Cidadão (${citizen.email})`);
+  // Profissional com registro ainda não verificado (para testar o 403 do RF010)
+  const unverifiedProfessional = await prisma.user.create({
+    data: {
+      name: 'Enf. Paulo Ribeiro',
+      email: 'paulo.ribeiro@vacinei.com.br',
+      passwordHash: defaultPasswordHash,
+      cpf: '555.555.555-55',
+      phone: '(82) 99999-0004',
+      role: UserRole.PROFISSIONAL_SAUDE,
+      isActive: true,
+      professionalRegistry: {
+        create: {
+          council: 'COREN',
+          registryNumber: '654321',
+          uf: 'AL',
+          isVerified: false,
+        },
+      },
+    },
+  });
+
+  console.log(
+    `✅ Usuários criados: Admin (${admin.email}), Profissionais (${professional.email}, ${unverifiedProfessional.email}), Cidadão (${citizen.email})`,
+  );
 
   // 3. Unidades Básicas de Saúde (Maceió / AL - Rede Municipal e Distritos Sanitários)
   console.log('🏥 Criando Unidades Básicas de Saúde (UBSs)...');
@@ -581,8 +728,10 @@ async function main() {
     },
   ];
 
+  const ubsIds: string[] = [];
   for (const ubs of ubssData) {
-    await prisma.ubs.create({ data: ubs });
+    const created = await prisma.ubs.create({ data: ubs });
+    ubsIds.push(created.id);
   }
   console.log(`✅ ${ubssData.length} UBSs de Maceió criadas com sucesso.`);
 
@@ -737,6 +886,74 @@ async function main() {
   }
 
   console.log(`✅ ${vaccinesData.length} vacinas e suas respectivas doses inseridas com sucesso.`);
+
+  // 5. Cidadãos e cadernetas com registros espalhados pelos últimos 12 meses
+  console.log('📒 Criando cidadãos e registros de vacinação...');
+  const vaccines = await prisma.vaccine.findMany({
+    include: { doses: { orderBy: { doseNumber: 'asc' } } },
+  });
+  const dosesByVaccine = new Map(vaccines.map((v) => [v.name, v.doses]));
+  const vaccineIndex = new Map(vaccines.map((v, i) => [v.name, i + 1]));
+
+  let recordsCount = 0;
+
+  for (const [index, entry] of CITIZENS.entries()) {
+    const number = String(index + 1).padStart(2, '0');
+    const profile = PROFILES[entry.profile];
+    // Deslocamento determinístico (0 a 16 dias) para variar as datas sem mudar o status esperado
+    const shift = (index % 5) * 4;
+
+    const created = await prisma.user.create({
+      data: {
+        name: entry.name,
+        email: `cidadao${number}@vacinei.com.br`,
+        passwordHash: defaultPasswordHash,
+        cpf: `600.000.0${number}-${number}`,
+        phone: `(82) 98888-00${number}`,
+        birthDate: profile.bornDaysAgo !== undefined
+          ? daysAgo(profile.bornDaysAgo - shift)
+          : new Date(profile.birthDate!),
+        role: UserRole.CIDADAO,
+        isActive: true,
+      },
+    });
+
+    let recordIndex = 0;
+    for (const [vaccineName, appliedDaysAgo] of Object.entries(profile.vaccines)) {
+      const doses = dosesByVaccine.get(vaccineName);
+      if (!doses) throw new Error(`Vacina não encontrada no seed: ${vaccineName}`);
+
+      for (const [doseIdx, days] of appliedDaysAgo.entries()) {
+        const kind = (index + recordIndex) % 4;
+        const isPresencial = kind <= 1;
+        const origin = isPresencial
+          ? RecordOrigin.SISTEMA_PRESENCIAL
+          : kind === 2
+            ? RecordOrigin.MANUAL
+            : RecordOrigin.OCR_ICR;
+
+        await prisma.vaccinationRecord.create({
+          data: {
+            userId: created.id,
+            doseId: doses[doseIdx].id,
+            applicationDate: daysAgo(Math.max(days - shift, 1)),
+            status: isPresencial ? VaccineStatus.CONFIRMADO : VaccineStatus.EM_DIA,
+            origin,
+            ocrConfidence: origin === RecordOrigin.OCR_ICR ? 0.82 + (recordIndex % 3) * 0.05 : null,
+            lotNumber: `LT${String(vaccineIndex.get(vaccineName)).padStart(2, '0')}${number}${doseIdx + 1}`,
+            appliedById: isPresencial ? professional.id : null,
+            ubsId: isPresencial ? ubsIds[(index * 3 + recordIndex) % ubsIds.length] : null,
+          },
+        });
+
+        recordIndex++;
+        recordsCount++;
+      }
+    }
+  }
+
+  console.log(`✅ ${CITIZENS.length} cidadãos e ${recordsCount} registros de vacinação criados.`);
+  console.log(`🔑 Senha de todos os usuários de teste: ${DEFAULT_PASSWORD}`);
   console.log('🚀 Seed concluído com sucesso!');
 }
 
