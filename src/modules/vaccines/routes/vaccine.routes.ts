@@ -11,18 +11,18 @@ const vaccineController = new VaccineController();
 vaccineRoutes.get('/', vaccineController.index);
 vaccineRoutes.get('/:id', vaccineController.show);
 
-// Gestão de vacinas (ADMIN e Profissional de Saúde)
+// Gestão de vacinas restrita a ADMIN (RF008)
 vaccineRoutes.post(
   '/',
   ensureAuthenticated,
-  checkRole(UserRole.ADMIN, UserRole.PROFISSIONAL_SAUDE),
+  checkRole(UserRole.ADMIN),
   vaccineController.create,
 );
 
 vaccineRoutes.put(
   '/:id',
   ensureAuthenticated,
-  checkRole(UserRole.ADMIN, UserRole.PROFISSIONAL_SAUDE),
+  checkRole(UserRole.ADMIN),
   vaccineController.update,
 );
 
