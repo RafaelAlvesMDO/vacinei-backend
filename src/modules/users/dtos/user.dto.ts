@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { UserRole } from '@prisma/client';
+import { passwordSchema } from '../../../utils/passwordSchema';
 
 export const professionalRegistrySchema = z.object({
   council: z.string().min(2, 'O conselho deve ter no mínimo 2 caracteres (ex: CRM, COREN)'),
@@ -10,7 +11,7 @@ export const professionalRegistrySchema = z.object({
 export const createUserSchema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
   email: z.string().email('E-mail em formato inválido'),
-  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+  password: passwordSchema,
   cpf: z.string().optional(),
   phone: z.string().optional(),
   birthDate: z.string().datetime().optional().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()),

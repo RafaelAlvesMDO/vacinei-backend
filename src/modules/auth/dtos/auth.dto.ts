@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { passwordSchema } from '../../../utils/passwordSchema';
 
 export const loginSchema = z.object({
   email: z.string().email('E-mail inválido'),
@@ -16,7 +17,7 @@ export const forgotPasswordSchema = z.object({
 export const resetPasswordSchema = z.object({
   email: z.string().email('E-mail inválido'),
   code: z.string().regex(/^\d{6}$/, 'O código deve ter 6 dígitos'),
-  newPassword: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+  newPassword: passwordSchema,
 });
 
 export type LoginDTO = z.infer<typeof loginSchema>;
