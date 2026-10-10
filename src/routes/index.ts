@@ -8,6 +8,7 @@ import {
   vaccinationRecordRoutes,
   citizenVaccinationRecordRoutes,
 } from '../modules/vaccination-records/routes/vaccination-record.routes';
+import { dashboardRoutes } from '../modules/dashboard/routes/dashboard.routes';
 
 const routes = Router();
 
@@ -38,5 +39,6 @@ routes.use('/ubs', ubsRoutes);
 routes.use('/citizens', citizenRoutes);
 routes.use('/citizens', citizenVaccinationRecordRoutes);
 routes.use('/vaccination-records', vaccinationRecordRoutes);
+routes.use('/dashboard', dashboardRoutes);
 
 export { routes };
