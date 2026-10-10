@@ -41,6 +41,15 @@ export const listUsersQuerySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(20),
 });
 
+export const searchCitizensQuerySchema = z.object({
+  search: z
+    .string()
+    .trim()
+    .min(2, 'Informe ao menos 2 caracteres para a busca')
+    .max(100, 'Termo de busca deve ter no máximo 100 caracteres'),
+});
+
 export type CreateUserDTO = z.infer<typeof createUserSchema>;
 export type UpdateUserDTO = z.infer<typeof updateUserSchema>;
 export type ListUsersQueryDTO = z.infer<typeof listUsersQuerySchema>;
+export type SearchCitizensQueryDTO = z.infer<typeof searchCitizensQuerySchema>;
