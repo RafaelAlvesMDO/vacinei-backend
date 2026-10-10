@@ -1,7 +1,7 @@
 ---
 name: git_commit
 description: >-
-  Padroniza a criação de commits e envio de alterações para o GitHub seguindo rigorosamente a convenção Conventional Commits com mensagens em português e o fluxo de execução definido (git add ., git commit e git push origin main). Use esta skill sempre que o usuário solicitar para commitar, versionar, salvar alterações ou enviar código para o repositório GitHub.
+  Padroniza a criação de commits e envio de alterações para o GitHub seguindo rigorosamente a convenção Conventional Commits com mensagens em português e o fluxo de execução definido (commits e push sempre na branch dev; nunca na main). Use esta skill sempre que o usuário solicitar para commitar, versionar, salvar alterações ou enviar código para o repositório GitHub.
 ---
 
 # Skill: `git_commit` - Padronização de Commits para GitHub
@@ -64,32 +64,39 @@ Apenas os seguintes tipos são autorizados:
 
 ## 3. Fluxo Obrigatório de Execução
 
+> [!IMPORTANT]
+> **Regras de branch:** todo trabalho e todo commit acontecem na branch `dev`. **Nunca** commitar, mergear ou dar push na `main`. Pull Request `dev` → `main` somente quando o usuário pedir explicitamente.
+
 Ao ser solicitado um commit através desta skill, o agente deve executar os seguintes passos em sequência:
 
-### Passo 1: Inspeção de Alterações
-Antes de qualquer comando, verificar o estado do repositório:
+### Passo 1: Garantir a Branch `dev`
+```bash
+git branch --show-current
+```
+- Se não estiver na `dev`, executar `git switch dev` antes de qualquer commit.
+
+### Passo 2: Inspeção de Alterações
 ```bash
 git status
 ```
 - Analisar as modificações (`git diff` ou lista de arquivos alterados) para determinar o `tipo` e `escopo` exatos.
-- Se foram alterados apenas arquivos de documentação (`agent.md`, `memory.md`, `README.md`), o tipo **DEVE** ser `docs`.
+- Se foram alterados apenas arquivos de documentação (`agent.md`, `memory.md`, `README.md`, `CLAUDE.md`), o tipo **DEVE** ser `docs`.
 
-### Passo 2: Adicionar Arquivos (Staging)
-Incluir todos os arquivos modificados e criados no índice do Git:
+### Passo 3: Adicionar Arquivos (Staging)
+Adicionar explicitamente os arquivos da alteração (evitar `git add .`):
 ```bash
-git add .
+git add <arquivos>
 ```
+- **Nunca** versionar `.env` nem credenciais locais (ex: usuário/senha do banco em `.env.example`).
 
-### Passo 3: Criar o Commit
-Executar o commit utilizando a mensagem gerada em conformidade com as diretrizes:
+### Passo 4: Criar o Commit
 ```bash
 git commit -m "tipo(escopo): descrição concisa em português"
 ```
 
-### Passo 4: Enviar para o Remoto (Push)
-Publicar as alterações no branch principal (`main`) no repositório remoto:
+### Passo 5: Enviar para o Remoto (Push)
 ```bash
-git push origin main
+git push origin dev
 ```
 
 ---
@@ -98,5 +105,6 @@ git push origin main
 
 - **Repositório Git não inicializado:** Se o diretório atual não possuir repositório Git (`fatal: not a git repository`), alertar o usuário e inicializar com `git init` ou verificar a pasta correta antes de prosseguir.
 - **Remote `origin` não configurado:** Caso `git remote -v` esteja vazio, solicitar ou orientar o usuário a configurar a URL do repositório remoto no GitHub (`git remote add origin <url>`).
-- **Conflito ou Rejeição de Push:** Caso o branch `main` remoto possua commits novos, realizar a sincronização (`git pull --rebase origin main`) antes de tentar o push novamente, evitando `push --force`.
+- **Conflito ou Rejeição de Push:** Caso a branch `dev` remota possua commits novos, realizar a sincronização (`git pull --rebase origin dev`) antes de tentar o push novamente, evitando `push --force`.
+- **Pull Request:** Somente quando o usuário pedir, abrir PR `dev` → `main` (`gh pr create --base main --head dev`). Nunca mergear na `main` diretamente.
 - **Sem alterações:** Se `git status` retornar `nothing to commit, working tree clean`, reportar ao usuário que não há modificações pendentes para commit.

@@ -42,7 +42,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 6. **Padronização de Versionamento e Commits (Skill `git_commit`):**
    - Adoção estrita da convenção Conventional Commits (`tipo(escopo): descrição concisa`) com mensagens em português do Brasil.
    - Tipos permitidos: `feat`, `fix`, `docs`, `style`, `refactor`.
-   - Fluxo padronizado de publicação via skill: `git add .` -> `git commit -m "tipo(escopo): descrição concisa"` -> `git push origin main`.
+   - Fluxo padronizado via skill (`.claude/skills/git_commit`): trabalho e commits sempre na branch `dev` -> `git push origin dev`. Nunca commitar/mergear/push na `main`; PR `dev` -> `main` só a pedido do autor (decisão de 2026-10-10).
 
 ---
 
