@@ -14,6 +14,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
   - **CRUD de Vacinas (`src/modules/vaccines`):** Listagem com busca textual e público-alvo, detalhes por ID com doses ordenadas, criação, atualização e desativação segura protegidas por RBAC.
   - **CRUD de Unidades Básicas de Saúde (`src/modules/ubs`):** Listagem com cálculo geográfico de proximidade por coordenadas (Haversine validado com 36 UBSs), filtro por raio (km), busca por texto/bairro/cidade, detalhes por ID e gestão de UBSs.
   - **Caderneta e Confirmação Presencial (`src/modules/vaccination-records`):** cálculo de status por vacina (`EM_DIA`/`ATRASADA`/`COMPLETA`), confirmação de dose por profissional verificado (RF010/RS006), caderneta do cidadão (RF006) e busca de cidadão sem acentos (`/citizens`). Registros vinculados só ao próprio cidadão (`dependentId = null`); dependentes ficam para depois.
+  - **Dashboard do Profissional (`src/modules/dashboard`, RF009/RS005):** resumo (cadernetas, vacinas registradas, doses atrasadas), últimas doses e série mensal de 12 meses, restritos a profissional verificado.
   - **Seed com dados de dashboard:** 25 cidadãos (`cidadao01..25@vacinei.com.br`), 142 registros nos últimos 12 meses com mistura de em dia, atrasados e completos; profissional não verificado `paulo.ribeiro@vacinei.com.br` para testar o 403. Senha de todos: `Vacinei@2026` (RF001).
 - **Data da Última Atualização:** 2026-10-10
 
@@ -54,6 +55,12 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
    - A caderneta lista só vacinas com ao menos um registro (evita marcar adultos como atrasados em vacinas infantis).
    - Acesso a profissional verificado via middleware `ensureVerifiedProfessional` (consulta `professionalRegistry.isVerified` no banco a cada requisição).
    - Busca sem acentos usa a extensão PostgreSQL `unaccent` (migration `20261010231422_enable_unaccent_extension`).
+
+8. **Confirmação Presencial e Dashboard (2026-10-10):**
+   - `VaccinationRecord.confirmedAt` (migration `20261010232527_add_confirmed_at_to_vaccination_record`) guarda a data da confirmação presencial. Confirmar um registro manual/OCR mantém a `applicationDate` original (se nula, recebe a data da confirmação); registros criados pelo profissional têm `applicationDate = confirmedAt = agora`.
+   - O resumo do dashboard calcula os atrasos em lote com a função pura `calculateVaccineStatus` (uma query, em vez de chamar o service por par cidadão/vacina). `totalDosesAtrasadas` = pares cidadão/vacina com status `ATRASADA`.
+   - A série mensal agrupa pela `applicationDate` no fuso `America/Maceio` via `generate_series` (meses sem registro retornam 0).
+   - **Pendência:** as métricas do dashboard consideram só cidadãos ativos (`dependentId = null`). Os registros de dependentes devem entrar nas métricas quando o RF012 for implementado.
 
 ---
 
@@ -106,9 +113,14 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - `DELETE /ubs/:id`: Remoção/desativação de UBS (`ADMIN`).
 
 ### 4.5. Caderneta e Confirmação Presencial (`/vaccination-records`, `/citizens`)
-- `POST /vaccination-records/confirm`: Confirmação presencial de dose (profissional verificado). Data = agora, profissional = sessão. Cria registro `SISTEMA_PRESENCIAL`/`CONFIRMADO` ou promove registro manual/OCR existente a `CONFIRMADO` (RF007 nota 7); 409 se já confirmado.
+- `POST /vaccination-records/confirm`: Confirmação presencial de dose (profissional verificado). `confirmedAt` = agora, profissional = sessão; registro existente mantém a `applicationDate` original. Cria registro `SISTEMA_PRESENCIAL`/`CONFIRMADO` ou promove registro manual/OCR existente a `CONFIRMADO` (RF007 nota 7); 409 se já confirmado.
 - `GET /citizens?search=`: Busca de cidadão por nome via `unaccent` + `ILIKE` (profissional verificado), CPF mascarado, até 20 resultados.
 - `GET /citizens/:id/vaccination-records`: Caderneta agrupada por vacina com status calculado (titular ou profissional verificado).
+
+### 4.6. Dashboard do Profissional (`/dashboard`, profissional verificado)
+- `GET /dashboard/summary`: `totalCadernetas`, `totalVacinasRegistradas` e `totalDosesAtrasadas`.
+- `GET /dashboard/recent-doses?limit=10`: Últimas doses (1 a 50) com cidadão, vacina, dose, data e status do registro.
+- `GET /dashboard/monthly`: Vacinas aplicadas por mês nos últimos 12 meses, incluindo meses com zero.
 
 ---
 
@@ -123,4 +135,5 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - [x] **CRUD de Unidades Básicas de Saúde (UBSs):** Consulta, cadastro e cálculo geográfico por proximidade.
 - [ ] **Módulo de Dependentes (`src/modules/dependents`):** Cadastro e listagem de dependentes (filhos/tutelados) vinculados ao responsável (RS008).
 - [x] **Módulo de Caderneta e Registro de Aplicações (`src/modules/vaccination-records`):** Registro de aplicação presencial por profissional (RS006/RF010) e cálculo dos status da caderneta (`EM_DIA`, `ATRASADA`, `COMPLETA`).
+- [x] **Dashboard do Profissional (`src/modules/dashboard`):** Indicadores, últimas doses e série mensal (RF009/RS005). Dependentes entram com o RF012.
 - [ ] **Coleção de Requisições / Documentação de Teste:** Criar documentação clara de chamadas HTTP (Insomnia/Postman/cURL) para demonstrar na banca.
