@@ -9,6 +9,7 @@ Scripts: `npm run dev` (tsx watch), `npm run build` (tsc), `npx prisma db seed`.
 
 ## Contexto
 - Regras completas em `agent.md`. Status, decisões e roadmap em `memory.md`. Leia o `memory.md` só quando precisar de status ou histórico, e atualize-o ao concluir um módulo ou tomar uma decisão de arquitetura.
+- Antes de mudar qualquer regra de negócio, consulte `docs/DECISOES.md` (e registre lá novas decisões).
 - Módulos em `src/modules/<modulo>/{controllers,dtos,services,repositories,routes}`. Controller só faz HTTP. Service tem 100% da regra de negócio (nunca usa req/res). Acesso ao banco via Prisma.
 - Valide com Zod todo `body`/`query`/`params` antes do service. Erros com `throw new AppError(msg, status)`, tratados no errorHandler global.
 - Perfis: `CIDADAO`, `PROFISSIONAL_SAUDE`, `ADMIN` (`ensureAuthenticated` + `checkRole`).
