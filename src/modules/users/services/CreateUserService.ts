@@ -1,11 +1,24 @@
 import bcrypt from 'bcryptjs';
+import { UserRole } from '@prisma/client';
 import { prisma } from '../../../config/prisma';
 import { AppError } from '../../../errors/AppError';
 import { CreateUserDTO } from '../dtos/user.dto';
 
+interface IRequester {
+  id: string;
+  role: UserRole;
+}
+
 export class CreateUserService {
-  async execute(data: CreateUserDTO) {
+  async execute(data: CreateUserDTO, requester?: IRequester) {
     const { name, email, password, cpf, phone, birthDate, role, professionalRegistry } = data;
+
+    const isCreatedByAdmin = requester?.role === UserRole.ADMIN;
+
+    // Cadastro público só cria CIDADAO e PROFISSIONAL_SAUDE; ADMIN apenas por outro admin
+    if (role === UserRole.ADMIN && !isCreatedByAdmin) {
+      throw new AppError('Apenas administradores podem criar contas de administrador.', 403);
+    }
 
     // 1. Verifica duplicidade de e-mail
     const emailAlreadyInUse = await prisma.user.findUnique({
@@ -64,8 +77,10 @@ export class CreateUserService {
                   council: professionalRegistry.council.toUpperCase(),
                   registryNumber: professionalRegistry.registryNumber,
                   uf: professionalRegistry.uf.toUpperCase(),
-                  isVerified: true, // Pré-validado para fins de desenvolvimento/apresentação
-                  verifiedAt: new Date(),
+                  // Cadastro público nasce pendente (RS001); criado por ADMIN já nasce verificado
+                  ...(isCreatedByAdmin
+                    ? { isVerified: true, verifiedAt: new Date(), verifiedById: requester.id }
+                    : { isVerified: false }),
                 },
               },
             }

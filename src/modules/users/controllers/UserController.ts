@@ -17,7 +17,7 @@ export class UserController {
     const validatedData = createUserSchema.parse(req.body);
 
     const createUserService = new CreateUserService();
-    const user = await createUserService.execute(validatedData);
+    const user = await createUserService.execute(validatedData, req.user);
 
     return res.status(201).json({
       status: 'success',

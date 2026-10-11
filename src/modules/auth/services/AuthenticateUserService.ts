@@ -5,6 +5,7 @@ import { prisma } from '../../../config/prisma';
 import { authConfig } from '../../../config/auth';
 import { AppError } from '../../../errors/AppError';
 import { LoginDTO } from '../dtos/auth.dto';
+import { toRegistrySummary } from '../../professionals/services/professionalPresenter';
 
 export class AuthenticateUserService {
   async execute({ email, password }: LoginDTO) {
@@ -60,7 +61,7 @@ export class AuthenticateUserService {
         email: user.email,
         cpf: user.cpf,
         role: user.role,
-        professionalRegistry: user.professionalRegistry,
+        professionalRegistry: toRegistrySummary(user.role, user.professionalRegistry),
       },
       token,
       refreshToken: refreshTokenString,

@@ -67,6 +67,8 @@ model User {
 
   // Relações
   professionalRegistry ProfessionalRegistry?
+  verifiedRegistries   ProfessionalRegistry[] @relation("RegistryVerifiedBy")
+  rejectedRegistries   ProfessionalRegistry[] @relation("RegistryRejectedBy")
   dependents           Dependent[]
   vaccinationRecords   VaccinationRecord[]    @relation("CitizenVaccines")
   appliedRecords       VaccinationRecord[]    @relation("AppliedVaccines")
@@ -86,10 +88,17 @@ model ProfessionalRegistry {
   uf             String    // Sigla do estado (ex: AL, SP)
   isVerified     Boolean   @default(false) @map("is_verified")
   verifiedAt     DateTime? @map("verified_at")
+  verifiedById   String?   @map("verified_by_id")
+  // Recusa da verificação (RS001): conta segue ativa, porém não verificada
+  rejectedAt      DateTime? @map("rejected_at")
+  rejectedById    String?   @map("rejected_by_id")
+  rejectionReason String?   @map("rejection_reason")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verifiedBy User? @relation("RegistryVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+  rejectedBy User? @relation("RegistryRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
 
   @@unique([council, registryNumber, uf])
   @@map("professional_registries")
@@ -109,13 +118,14 @@ model RefreshToken {
 }
 
 model PasswordResetCode {
-  id        String   @id @default(uuid())
-  code      String   // Código de 6 dígitos
-  userId    String   @map("user_id")
-  attempts  Int      @default(0)
-  isUsed    Boolean  @default(false) @map("is_used")
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
+  id           String    @id @default(uuid())
+  code         String    // Hash SHA-256 do código de 6 dígitos
+  userId       String    @map("user_id")
+  attempts     Int       @default(0)
+  isUsed       Boolean   @default(false) @map("is_used")
+  blockedUntil DateTime? @map("blocked_until") // Bloqueio de 15 min após 3 tentativas erradas
+  expiresAt    DateTime  @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -195,6 +205,7 @@ model VaccinationRecord {
   doseId          String        @map("dose_id")
   status          VaccineStatus @default(EM_DIA)
   applicationDate DateTime?     @map("application_date")
+  confirmedAt     DateTime?     @map("confirmed_at") // Confirmação presencial pelo profissional (RF010)
   expectedDate    DateTime?     @map("expected_date")
   lotNumber       String?       @map("lot_number")
   manufacturer    String?

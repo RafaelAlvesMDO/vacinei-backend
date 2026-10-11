@@ -11,18 +11,18 @@ const ubsController = new UbsController();
 ubsRoutes.get('/', ubsController.index);
 ubsRoutes.get('/:id', ubsController.show);
 
-// Gestão de postos de saúde (ADMIN e Profissional de Saúde)
+// Gestão de postos de saúde restrita a ADMIN (RF008)
 ubsRoutes.post(
   '/',
   ensureAuthenticated,
-  checkRole(UserRole.ADMIN, UserRole.PROFISSIONAL_SAUDE),
+  checkRole(UserRole.ADMIN),
   ubsController.create,
 );
 
 ubsRoutes.put(
   '/:id',
   ensureAuthenticated,
-  checkRole(UserRole.ADMIN, UserRole.PROFISSIONAL_SAUDE),
+  checkRole(UserRole.ADMIN),
   ubsController.update,
 );
 

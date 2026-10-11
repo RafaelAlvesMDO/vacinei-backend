@@ -6,4 +6,9 @@ export const authConfig = {
   refreshToken: {
     expiresInDays: Number(process.env.REFRESH_TOKEN_EXPIRES_DAYS) || 30,
   },
+  passwordReset: {
+    expiresInMinutes: 10,
+    maxAttempts: 3,
+    blockMinutes: 15,
+  },
 };
