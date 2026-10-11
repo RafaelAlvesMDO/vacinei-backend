@@ -282,7 +282,7 @@ Objeto `Professional`:
 
 ## Dashboard (`/dashboard`): painel do profissional (RF009)
 
-Todas as rotas exigem **profissional verificado**. Os dados consideram só cidadãos ativos; dependentes ainda não entram.
+`/summary` e `/monthly` são dados agregados e aceitam **ADMIN** ou **profissional verificado**. `/recent-doses` identifica cidadãos com dados de saúde e exige **profissional verificado** (LGPD, princípio da necessidade). Os dados consideram só cidadãos ativos; dependentes ainda não entram.
 
 | Método | Rota | Query | Resposta 200 (`data`) |
 | :--- | :--- | :--- | :--- |
