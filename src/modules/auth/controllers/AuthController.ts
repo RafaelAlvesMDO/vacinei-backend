@@ -11,6 +11,7 @@ import { ForgotPasswordService } from '../services/ForgotPasswordService';
 import { ResetPasswordService } from '../services/ResetPasswordService';
 import { prisma } from '../../../config/prisma';
 import { AppError } from '../../../errors/AppError';
+import { toRegistrySummary } from '../../professionals/services/professionalPresenter';
 
 export class AuthController {
   async login(req: Request, res: Response): Promise<Response> {
@@ -91,7 +92,10 @@ export class AuthController {
 
     return res.status(200).json({
       status: 'success',
-      data: user,
+      data: {
+        ...user,
+        professionalRegistry: toRegistrySummary(user.role, user.professionalRegistry),
+      },
     });
   }
 }

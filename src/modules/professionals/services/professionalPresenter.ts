@@ -25,13 +25,26 @@ type ProfessionalRow = Prisma.UserGetPayload<{ select: typeof professionalSelect
 
 export type VerificationStatus = 'PENDENTE' | 'VERIFICADO' | 'RECUSADO';
 
+type RegistryVerification = { isVerified: boolean; rejectedAt: Date | null } | null | undefined;
+
+export function getVerificationStatus(registry: RegistryVerification): VerificationStatus {
+  if (registry?.isVerified) return 'VERIFICADO';
+  if (registry?.rejectedAt) return 'RECUSADO';
+  return 'PENDENTE';
+}
+
+// Resumo da verificação exposto no login e no /auth/me (null para quem não é PROFISSIONAL_SAUDE)
+export function toRegistrySummary(role: string, registry: RegistryVerification) {
+  if (role !== 'PROFISSIONAL_SAUDE') return null;
+  return {
+    isVerified: registry?.isVerified ?? false,
+    status: getVerificationStatus(registry),
+  };
+}
+
 // Formato de resposta dos endpoints de verificação de profissionais (RS001)
 export function toProfessionalResponse({ professionalRegistry: registry, ...user }: ProfessionalRow) {
-  const verificationStatus: VerificationStatus = registry?.isVerified
-    ? 'VERIFICADO'
-    : registry?.rejectedAt
-      ? 'RECUSADO'
-      : 'PENDENTE';
+  const verificationStatus = getVerificationStatus(registry);
 
   return {
     id: user.id,

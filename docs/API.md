@@ -44,6 +44,7 @@ Senha de todos: **`Vacinei@2026`**
 - **Acesso:** Público
 - **Body:** `{ email, password }`
 - **200:** `data: { user: { id, name, email, cpf, role, professionalRegistry }, token, refreshToken }`
+  - `professionalRegistry`: `{ isVerified, status: "PENDENTE" | "VERIFICADO" | "RECUSADO" }` quando `role = PROFISSIONAL_SAUDE`. É `null` para os outros perfis.
 - **Erros:**
   - `400`: validação.
   - `401`: `Credenciais inválidas.` (mensagem genérica).
@@ -75,6 +76,7 @@ Senha de todos: **`Vacinei@2026`**
 ### GET `/auth/me`
 - **Acesso:** Autenticado
 - **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, professionalRegistry, dependents[] }`
+  - `professionalRegistry`: mesmo formato do login, `{ isVerified, status }` para `PROFISSIONAL_SAUDE` e `null` para os outros perfis.
 - **Erros:**
   - `401`: não autenticado.
   - `404`: usuário não encontrado.
