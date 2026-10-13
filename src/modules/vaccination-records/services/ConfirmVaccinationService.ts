@@ -1,5 +1,6 @@
-import { RecordOrigin, UserRole, VaccineStatus } from '@prisma/client';
+import { RecordOrigin, VaccineStatus } from '@prisma/client';
 import { prisma } from '../../../config/prisma';
+import { CITIZEN_ROLES } from '../../../utils/citizenRoles';
 import { AppError } from '../../../errors/AppError';
 import { ConfirmVaccinationDTO } from '../dtos/vaccination-record.dto';
 import { CalculateVaccineStatusService } from './CalculateVaccineStatusService';
@@ -33,8 +34,13 @@ export class ConfirmVaccinationService {
    * mantendo a applicationDate original; registros novos recebem applicationDate = confirmedAt.
    */
   async execute(professionalId: string, { citizenId, vaccineId, doseId, lote }: ConfirmVaccinationDTO) {
+    // RS006: o profissional também é cidadão (D11), mas não confirma a própria vacina
+    if (citizenId === professionalId) {
+      throw new AppError('Não é permitido confirmar a própria vacinação', 403);
+    }
+
     const citizen = await prisma.user.findFirst({
-      where: { id: citizenId, role: UserRole.CIDADAO, isActive: true },
+      where: { id: citizenId, role: { in: CITIZEN_ROLES }, isActive: true },
       select: { id: true },
     });
 

@@ -28,7 +28,7 @@ export class GetMonthlyVaccinationsService {
         INNER JOIN users u ON u.id = vr.user_id
         WHERE vr.dependent_id IS NULL
           AND vr.application_date IS NOT NULL
-          AND u.role = 'CIDADAO'::"UserRole"
+          AND u.role IN ('CIDADAO'::"UserRole", 'PROFISSIONAL_SAUDE'::"UserRole")
           AND u.is_active = true
       )
       SELECT to_char(m.month, 'YYYY-MM') AS month, COUNT(r.month)::int AS total
