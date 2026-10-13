@@ -37,6 +37,8 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
    - **JWT (Access Token) + Refresh Tokens:** Tokens de acesso de 15 min e refresh tokens opacos com rotação persistidos na tabela `refresh_tokens`.
    - **Perfis de Acesso:** `CIDADAO`, `PROFISSIONAL_SAUDE` e `ADMIN`.
    - **Validação de Registro Profissional (RS001):** Tabela `professional_registries` com unicidade composta `[council, registryNumber, uf]`.
+   - **Categoria profissional (2026-10-12, D12):** enum `ProfessionalCategory` em `professional_registries`; `council` derivado no backend (`src/utils/professionalCouncil.ts`). UF via campo `uf` ou sufixo `-UF` do número.
+   - **Profissional também é cidadão (2026-10-12, D11):** `CITIZEN_ROLES` (`src/utils/citizenRoles.ts`) = `CIDADAO` + `PROFISSIONAL_SAUDE` na busca, caderneta, confirmação e dashboard; autoconfirmação bloqueada (403, RS006).
    - **Recuperação de Senha (2026-10-10):** Código de 6 dígitos (`crypto.randomInt`) salvo apenas como hash SHA-256, validade de 10 min; novo pedido invalida códigos anteriores. 3 erros bloqueiam por 15 min via `blockedUntil` e invalidam o código; durante o bloqueio, `forgot-password` não gera novo código (evita burlar o bloqueio). Reset bem-sucedido troca a senha e revoga todos os refresh tokens em transação. `forgot-password` sempre retorna a mesma resposta (anti-enumeração).
    - **MailProvider (`src/providers/MailProvider`):** Nodemailer configurado por `SMTP_*`/`MAIL_FROM`; sem SMTP configurado, o e-mail é exibido no console (modo de teste local).
 
@@ -44,7 +46,8 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
    - Cálculo de distâncias em quilômetros via fórmula matemática de Haversine (`src/utils/distance.ts`) na camada de serviço, ordenando postos de saúde da mais próxima à mais distante.
 
 5. **Integridade de Dados e Soft Deletes:**
-   - Vacinas com histórico vacinal e UBSs com registros vinculados recebem desativação lógica (`isActive: false`), impedindo corrupção do histórico epidemiológico.
+   - Vacinas com histórico vacinal recebem desativação lógica (`isActive: false`), impedindo corrupção do histórico epidemiológico.
+   - UBSs nunca são excluídas (2026-10-12, D10): `DELETE /ubs/:id` removido; ativação/desativação via `PATCH /ubs/:id/status`.
 
 6. **Padronização de Versionamento e Commits (Skill `git_commit`):**
    - Adoção estrita da convenção Conventional Commits (`tipo(escopo): descrição concisa`) com mensagens em português do Brasil.
@@ -99,7 +102,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - `POST /auth/reset-password`: Valida código (3 tentativas, bloqueio de 15 min), redefine a senha e revoga sessões.
 
 ### 4.2. Usuários / Contas (`/users`)
-- `POST /users`: Cadastro de cidadão ou profissional de saúde (com CRM/COREN; pendente no cadastro público, verificado se criado por ADMIN). `ADMIN` só com token de ADMIN.
+- `POST /users`: Cadastro de cidadão ou profissional de saúde conforme RF001 (nome com 2+ palavras até 120, celular com 11 dígitos, e-mail até 100; profissional com `category` + `registryNumber`; pendente no cadastro público, verificado se criado por ADMIN). `ADMIN` só com token de ADMIN.
 - `GET /users/me`: Perfil do próprio usuário logado.
 - `PUT /users/me`: Atualização cadastral do próprio usuário.
 - `DELETE /users/me`: Desativação da própria conta com revogação de sessões ativas.
@@ -116,11 +119,11 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - `DELETE /vaccines/:id`: Remoção/desativação de vacina (`ADMIN`).
 
 ### 4.4. Unidades Básicas de Saúde (`/ubs`)
-- `GET /ubs`: Listagem de UBSs com suporte a filtros (`city`, `state`, `search`) e cálculo de proximidade (`latitude`, `longitude`, `radiusKm`).
+- `GET /ubs`: Listagem de UBSs ativas com filtros (`city`, `state`, `search`) e proximidade (`latitude`, `longitude`, `radiusKm`); `includeInactive=true` só para `ADMIN`.
 - `GET /ubs/:id`: Detalhes de uma UBS com contagem de atendimentos e campanhas.
-- `POST /ubs`: Cadastro de UBS (`ADMIN`).
+- `POST /ubs`: Cadastro de UBS com campos do RF008 (CEP, logradouro, `number`, bairro, horário obrigatórios) (`ADMIN`).
 - `PUT /ubs/:id`: Edição de UBS (`ADMIN`).
-- `DELETE /ubs/:id`: Remoção/desativação de UBS (`ADMIN`).
+- `PATCH /ubs/:id/status`: Ativa/desativa UBS (`ADMIN`); não há exclusão.
 
 ### 4.5. Caderneta e Confirmação Presencial (`/vaccination-records`, `/citizens`)
 - `POST /vaccination-records/confirm`: Confirmação presencial de dose (profissional verificado). `confirmedAt` = agora, profissional = sessão; registro existente mantém a `applicationDate` original. Cria registro `SISTEMA_PRESENCIAL`/`CONFIRMADO` ou promove registro manual/OCR existente a `CONFIRMADO` (RF007 nota 7); 409 se já confirmado.

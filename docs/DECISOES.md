@@ -22,6 +22,11 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** garantir que só profissionais reais confirmem doses, sem depender de APIs externas que não estão disponíveis no prazo do TCC.
 - **Requisito:** RS001.
 
+### D12 — Conselho derivado da categoria profissional
+- **Decisão:** o cliente informa a categoria (`MEDICO`, `ENFERMEIRO`, `TECNICO_ENFERMAGEM`, `FARMACEUTICO`, `CIRURGIAO_DENTISTA`) e o backend deriva o conselho (CRM, COREN, CRF, CRO). A UF do registro vem no campo `uf` ou como sufixo do número (`123456-AL`).
+- **Motivo:** evita combinações inválidas de categoria e conselho e mantém a regra no backend (D01).
+- **Requisito:** RF001, RS001.
+
 ### D04 — Código de recuperação salvo como hash e resposta genérica
 - **Decisão:** o código de 6 dígitos é guardado só como hash (10 min de validade, 3 tentativas erradas bloqueiam por 15 min). O endpoint de "esqueci a senha" sempre responde com a mesma mensagem, exista ou não a conta. O reset bem-sucedido revoga todos os refresh tokens.
 - **Motivo:** vazamento do banco não expõe códigos válidos; evita enumeração de contas e força bruta.
@@ -46,12 +51,22 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** simplifica o modelo de esquema vacinal para a entrega da pré-banca.
 - **Requisito:** catálogo de vacinas/doses.
 
+### D11 — O profissional de saúde também é cidadão
+- **Decisão:** o profissional de saúde também é cidadão: aparece na busca, tem caderneta e pode ter vacinas confirmadas por outro profissional, mas não pode confirmar a própria vacina (RS006). O `ADMIN` continua fora da busca e das métricas.
+- **Motivo:** profissionais também se vacinam; a autoconfirmação quebraria a validação por terceiro que dá valor ao status `CONFIRMADO`.
+- **Requisito:** RF009, RF010, RS006.
+
 ## Catálogo
 
 ### D08 — Vacinas e UBSs gerenciadas só pelo admin; leitura pública
-- **Decisão:** criar, editar e remover vacinas e UBSs é exclusivo do `ADMIN`. Os `GET` são públicos.
+- **Decisão:** criar, editar e desativar vacinas e UBSs é exclusivo do `ADMIN`. Os `GET` são públicos.
 - **Motivo:** são dados de referência públicos; a escrita precisa de controle para manter o catálogo confiável.
 - **Requisito:** RF008.
+
+### D10 — UBS desativada em vez de excluída
+- **Decisão:** uma UBS que deixa de existir é desativada (`isActive = false`) pelo `ADMIN` via `PATCH /ubs/:id/status`; não há exclusão. O `GET /ubs` público lista só as ativas; o `ADMIN` vê todas com `?includeInactive=true`.
+- **Motivo:** registros de vacinação e campanhas apontam para a UBS; excluí-la apagaria ou quebraria o histórico.
+- **Requisito:** RF008 (nota 8).
 
 ## Pendências
 
