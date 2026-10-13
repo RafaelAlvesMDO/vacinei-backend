@@ -1,5 +1,6 @@
 import { UserRole } from '@prisma/client';
 import { prisma } from '../../../config/prisma';
+import { CITIZEN_ROLES } from '../../../utils/citizenRoles';
 import { AppError } from '../../../errors/AppError';
 import { CheckVerifiedProfessionalService } from '../../users/services/CheckVerifiedProfessionalService';
 import { calculateVaccineStatus } from './CalculateVaccineStatusService';
@@ -24,7 +25,7 @@ export class GetCitizenVaccinationCardService {
     }
 
     const citizen = await prisma.user.findFirst({
-      where: { id: citizenId, role: UserRole.CIDADAO, isActive: true },
+      where: { id: citizenId, role: { in: CITIZEN_ROLES }, isActive: true },
       select: { id: true, name: true, birthDate: true },
     });
 

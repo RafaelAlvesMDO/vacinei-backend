@@ -35,7 +35,7 @@ export class UserController {
     }
 
     const getUserService = new GetUserService();
-    const user = await getUserService.execute(targetUserId);
+    const user = await getUserService.execute(targetUserId, req.user.id);
 
     return res.status(200).json({
       status: 'success',
@@ -66,7 +66,7 @@ export class UserController {
     const validatedData = updateUserSchema.parse(req.body);
 
     const updateUserService = new UpdateUserService();
-    const updatedUser = await updateUserService.execute(targetUserId, validatedData);
+    const updatedUser = await updateUserService.execute(targetUserId, validatedData, req.user.id);
 
     return res.status(200).json({
       status: 'success',

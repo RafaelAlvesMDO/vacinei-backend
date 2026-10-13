@@ -1,5 +1,7 @@
+import { Prisma, UserRole } from '@prisma/client';
 import { prisma } from '../../../config/prisma';
 import { SearchCitizensQueryDTO } from '../dtos/user.dto';
+import { isCpfLike, maskCpf, normalizeCpf } from '../../../utils/cpf';
 
 const MAX_RESULTS = 20;
 
@@ -8,26 +10,24 @@ interface ICitizenRow {
   name: string;
   birthDate: Date | null;
   cpf: string | null;
-}
-
-// LGPD: expõe apenas os dígitos centrais do CPF (***.123.456-**)
-function maskCpf(cpf: string | null): string | null {
-  const digits = cpf?.replace(/\D/g, '') ?? '';
-  if (digits.length !== 11) return null;
-  return `***.${digits.slice(3, 6)}.${digits.slice(6, 9)}-**`;
+  role: UserRole;
 }
 
 export class SearchCitizensService {
   async execute({ search }: SearchCitizensQueryDTO) {
-    // Escapa curingas do LIKE para que o termo seja tratado literalmente
-    const pattern = `%${search.replace(/[\\%_]/g, '\\$&')}%`;
+    // Termo com formato de CPF busca pelo CPF exato; senão, busca por nome (RF010 nota 1)
+    const filter = isCpfLike(search)
+      ? Prisma.sql`cpf = ${normalizeCpf(search)}`
+      : // Escapa curingas do LIKE para que o termo seja tratado literalmente
+        Prisma.sql`unaccent(name) ILIKE unaccent(${`%${search.replace(/[\\%_]/g, '\\$&')}%`})`;
 
     const citizens = await prisma.$queryRaw<ICitizenRow[]>`
-      SELECT id, name, birth_date AS "birthDate", cpf
+      SELECT id, name, birth_date AS "birthDate", cpf, role
       FROM users
-      WHERE role = 'CIDADAO'::"UserRole"
+      -- O profissional de saúde também é cidadão (D11); ADMIN fica de fora
+      WHERE role IN ('CIDADAO'::"UserRole", 'PROFISSIONAL_SAUDE'::"UserRole")
         AND is_active = true
-        AND unaccent(name) ILIKE unaccent(${pattern})
+        AND ${filter}
       ORDER BY name ASC
       LIMIT ${MAX_RESULTS}
     `;
@@ -37,6 +37,7 @@ export class SearchCitizensService {
       name: citizen.name,
       birthDate: citizen.birthDate,
       cpf: maskCpf(citizen.cpf),
+      role: citizen.role,
     }));
   }
 }

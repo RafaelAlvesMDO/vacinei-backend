@@ -22,6 +22,16 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** garantir que só profissionais reais confirmem doses, sem depender de APIs externas que não estão disponíveis no prazo do TCC.
 - **Requisito:** RS001.
 
+### D12 — Conselho derivado da categoria profissional
+- **Decisão:** o cliente informa a categoria (lista em D13) e o backend deriva o conselho (CRM, COREN, CRF). A UF do registro vem no campo `uf` ou como sufixo do número (`123456-AL`).
+- **Motivo:** evita combinações inválidas de categoria e conselho e mantém a regra no backend (D01).
+- **Requisito:** RF001, RS001.
+
+### D13 — Categorias profissionais restritas à vacinação
+- **Decisão:** as categorias aceitas são `MEDICO` (CRM), `ENFERMEIRO`, `TECNICO_ENFERMAGEM`, `AUXILIAR_ENFERMAGEM` (COREN) e `FARMACEUTICO` (CRF). `CIRURGIAO_DENTISTA` (CRO) foi removida e `AUXILIAR_ENFERMAGEM` adicionada.
+- **Motivo:** só entram categorias que atuam na aplicação de vacinas ou no acompanhamento dos indicadores.
+- **Requisito:** RF001, RS001.
+
 ### D04 — Código de recuperação salvo como hash e resposta genérica
 - **Decisão:** o código de 6 dígitos é guardado só como hash (10 min de validade, 3 tentativas erradas bloqueiam por 15 min). O endpoint de "esqueci a senha" sempre responde com a mesma mensagem, exista ou não a conta. O reset bem-sucedido revoga todos os refresh tokens.
 - **Motivo:** vazamento do banco não expõe códigos válidos; evita enumeração de contas e força bruta.
@@ -33,6 +43,19 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Decisão:** o `ADMIN` vê métricas e séries agregadas (dashboard, relatórios), nunca a caderneta individual de um cidadão.
 - **Motivo:** LGPD, princípio da necessidade: a função de gestão não exige dado pessoal de saúde.
 - **Requisito:** relatórios/dashboard; LGPD.
+
+### D14 — CPF e data de nascimento obrigatórios; CPF mascarado para terceiros
+- **Decisão:** CPF e data de nascimento são obrigatórios no cadastro de todos os perfis.
+  - O CPF é aceito com ou sem máscara, validado pelos dígitos verificadores, salvo só com os 11 números e único (409 se repetido).
+  - A data de nascimento não pode ser futura.
+  - O CPF completo só aparece para o próprio titular (`/users/me`, login, cadastro). Em listagens e em respostas sobre outra pessoa (admin, busca de cidadãos), ele vem mascarado (`***.123.456-**`).
+  - O profissional encontra um cidadão pelo CPF completo (busca exata em `GET /citizens`) e recebe de volta só a versão mascarada.
+- **Motivo:**
+  - Finalidade do CPF: identificar a pessoa de forma inequívoca no atendimento (RF010), evitando confusão entre homônimos e cadastros duplicados.
+  - Finalidade da data de nascimento: base do calendário vacinal (RF007).
+  - LGPD: princípios da finalidade, necessidade e minimização. Quem já tem o CPF em mãos confirma a identidade, mas a API não divulga o número a terceiros.
+- **Observação:** no banco as colunas continuam aceitando nulo por causa de registros antigos. A obrigatoriedade é garantida pela validação (Zod) no cadastro.
+- **Requisito:** RF001, RF007, RF010; LGPD.
 
 ## Caderneta
 
@@ -46,12 +69,22 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** simplifica o modelo de esquema vacinal para a entrega da pré-banca.
 - **Requisito:** catálogo de vacinas/doses.
 
+### D11 — O profissional de saúde também é cidadão
+- **Decisão:** o profissional de saúde também é cidadão: aparece na busca, tem caderneta e pode ter vacinas confirmadas por outro profissional, mas não pode confirmar a própria vacina (RS006). O `ADMIN` continua fora da busca e das métricas.
+- **Motivo:** profissionais também se vacinam; a autoconfirmação quebraria a validação por terceiro que dá valor ao status `CONFIRMADO`.
+- **Requisito:** RF009, RF010, RS006.
+
 ## Catálogo
 
 ### D08 — Vacinas e UBSs gerenciadas só pelo admin; leitura pública
-- **Decisão:** criar, editar e remover vacinas e UBSs é exclusivo do `ADMIN`. Os `GET` são públicos.
+- **Decisão:** criar, editar e desativar vacinas e UBSs é exclusivo do `ADMIN`. Os `GET` são públicos.
 - **Motivo:** são dados de referência públicos; a escrita precisa de controle para manter o catálogo confiável.
 - **Requisito:** RF008.
+
+### D10 — UBS desativada em vez de excluída
+- **Decisão:** uma UBS que deixa de existir é desativada (`isActive = false`) pelo `ADMIN` via `PATCH /ubs/:id/status`; não há exclusão. O `GET /ubs` público lista só as ativas; o `ADMIN` vê todas com `?includeInactive=true`.
+- **Motivo:** registros de vacinação e campanhas apontam para a UBS; excluí-la apagaria ou quebraria o histórico.
+- **Requisito:** RF008 (nota 8).
 
 ## Pendências
 

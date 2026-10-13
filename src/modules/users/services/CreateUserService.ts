@@ -3,10 +3,27 @@ import { UserRole } from '@prisma/client';
 import { prisma } from '../../../config/prisma';
 import { AppError } from '../../../errors/AppError';
 import { CreateUserDTO } from '../dtos/user.dto';
+import { COUNCIL_BY_CATEGORY, parseRegistryNumber } from '../../../utils/professionalCouncil';
 
 interface IRequester {
   id: string;
   role: UserRole;
+}
+
+// Formato já validado no DTO: separa o sufixo -UF do número e deriva o conselho
+function normalizeRegistry({ category, registryNumber, uf }: NonNullable<CreateUserDTO['professionalRegistry']>) {
+  const parsed = parseRegistryNumber(registryNumber);
+
+  if (!parsed) {
+    throw new AppError('Registro profissional em formato inválido.', 400);
+  }
+
+  return {
+    category,
+    council: COUNCIL_BY_CATEGORY[category],
+    registryNumber: parsed.number,
+    uf: (parsed.uf ?? uf ?? '').toUpperCase(),
+  };
 }
 
 export class CreateUserService {
@@ -29,25 +46,28 @@ export class CreateUserService {
       throw new AppError('Já existe um usuário cadastrado com este e-mail.', 409);
     }
 
-    // 2. Verifica duplicidade de CPF se fornecido
-    if (cpf) {
-      const cpfAlreadyInUse = await prisma.user.findUnique({
-        where: { cpf },
-      });
+    // 2. Verifica duplicidade de CPF (já normalizado para 11 dígitos no DTO)
+    const cpfAlreadyInUse = await prisma.user.findUnique({
+      where: { cpf },
+    });
 
-      if (cpfAlreadyInUse) {
-        throw new AppError('Já existe um usuário cadastrado com este CPF.', 409);
-      }
+    if (cpfAlreadyInUse) {
+      throw new AppError('Já existe um usuário cadastrado com este CPF.', 409);
     }
 
-    // 3. Validação do Registro Profissional (RS001)
-    if (role === 'PROFISSIONAL_SAUDE' && professionalRegistry) {
+    // 3. Validação do Registro Profissional (RS001); council derivado da categoria
+    const registry =
+      role === UserRole.PROFISSIONAL_SAUDE && professionalRegistry
+        ? normalizeRegistry(professionalRegistry)
+        : null;
+
+    if (registry) {
       const registryAlreadyInUse = await prisma.professionalRegistry.findUnique({
         where: {
           council_registryNumber_uf: {
-            council: professionalRegistry.council.toUpperCase(),
-            registryNumber: professionalRegistry.registryNumber,
-            uf: professionalRegistry.uf.toUpperCase(),
+            council: registry.council,
+            registryNumber: registry.registryNumber,
+            uf: registry.uf,
           },
         },
       });
@@ -66,17 +86,15 @@ export class CreateUserService {
         name,
         email,
         passwordHash,
-        cpf: cpf || null,
-        phone: phone || null,
-        birthDate: birthDate ? new Date(birthDate) : null,
+        cpf,
+        phone,
+        birthDate: new Date(birthDate),
         role,
-        ...(professionalRegistry && role === 'PROFISSIONAL_SAUDE'
+        ...(registry
           ? {
               professionalRegistry: {
                 create: {
-                  council: professionalRegistry.council.toUpperCase(),
-                  registryNumber: professionalRegistry.registryNumber,
-                  uf: professionalRegistry.uf.toUpperCase(),
+                  ...registry,
                   // Cadastro público nasce pendente (RS001); criado por ADMIN já nasce verificado
                   ...(isCreatedByAdmin
                     ? { isVerified: true, verifiedAt: new Date(), verifiedById: requester.id }

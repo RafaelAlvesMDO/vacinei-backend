@@ -1,8 +1,9 @@
 import { prisma } from '../../../config/prisma';
 import { AppError } from '../../../errors/AppError';
+import { maskCpf } from '../../../utils/cpf';
 
 export class GetUserService {
-  async execute(userId: string) {
+  async execute(userId: string, requesterId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -35,6 +36,13 @@ export class GetUserService {
       throw new AppError('Usuário não encontrado.', 404);
     }
 
-    return user;
+    // LGPD: CPF completo (do titular e dos dependentes) só para o próprio titular
+    if (requesterId === userId) return user;
+
+    return {
+      ...user,
+      cpf: maskCpf(user.cpf),
+      dependents: user.dependents.map((dependent) => ({ ...dependent, cpf: maskCpf(dependent.cpf) })),
+    };
   }
 }

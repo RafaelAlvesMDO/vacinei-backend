@@ -1,14 +1,14 @@
-import { UserRole } from '@prisma/client';
 import { prisma } from '../../../config/prisma';
+import { CITIZEN_ROLES } from '../../../utils/citizenRoles';
 import { RecentDosesQueryDTO } from '../dtos/dashboard.dto';
 
 export class GetRecentDosesService {
-  // Últimas doses registradas em cadernetas de cidadãos (RF009); dependentes ficam para o RF012
+  // Últimas doses em cadernetas de cidadãos e profissionais (RF009, D11); dependentes ficam para o RF012
   async execute({ limit }: RecentDosesQueryDTO) {
     const records = await prisma.vaccinationRecord.findMany({
       where: {
         dependentId: null,
-        user: { role: UserRole.CIDADAO, isActive: true },
+        user: { role: { in: CITIZEN_ROLES }, isActive: true },
       },
       orderBy: [{ applicationDate: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }],
       take: limit,

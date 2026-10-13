@@ -1,11 +1,11 @@
-import { UserRole } from '@prisma/client';
 import { prisma } from '../../../config/prisma';
+import { CITIZEN_ROLES } from '../../../utils/citizenRoles';
 import { calculateVaccineStatus } from '../../vaccination-records/services/CalculateVaccineStatusService';
 
 export class GetDashboardSummaryService {
   /**
-   * Indicadores do painel do profissional (RF009). Considera apenas cadernetas de
-   * cidadãos ativos; dependentes entram quando o RF012 for implementado.
+   * Indicadores do painel do profissional (RF009). Considera as cadernetas de
+   * cidadãos e profissionais ativos (D11); dependentes entram com o RF012.
    * O status por vacina usa a mesma regra do CalculateVaccineStatusService, mas
    * em lote, para não consultar o banco a cada par cidadão/vacina.
    */
@@ -13,7 +13,7 @@ export class GetDashboardSummaryService {
     const records = await prisma.vaccinationRecord.findMany({
       where: {
         dependentId: null,
-        user: { role: UserRole.CIDADAO, isActive: true },
+        user: { role: { in: CITIZEN_ROLES }, isActive: true },
       },
       select: {
         userId: true,

@@ -20,6 +20,15 @@ enum UserRole {
   ADMIN
 }
 
+// Categoria do profissional de saúde; o conselho (council) é derivado dela no backend
+enum ProfessionalCategory {
+  MEDICO
+  ENFERMEIRO
+  TECNICO_ENFERMAGEM
+  AUXILIAR_ENFERMAGEM
+  FARMACEUTICO
+}
+
 enum TargetAudience {
   CRIANCA
   ADOLESCENTE
@@ -83,7 +92,8 @@ model User {
 model ProfessionalRegistry {
   id             String    @id @default(uuid())
   userId         String    @unique @map("user_id")
-  council        String    // ex: CRM, COREN, CRF
+  category       ProfessionalCategory
+  council        String    // Derivado da categoria: CRM, COREN, CRF
   registryNumber String    @map("registry_number")
   uf             String    // Sigla do estado (ex: AL, SP)
   isVerified     Boolean   @default(false) @map("is_verified")
@@ -234,7 +244,8 @@ model Ubs {
   id           String   @id @default(uuid())
   cnes         String?  @unique // Código Nacional de Estabelecimentos de Saúde
   name         String
-  address      String
+  address      String   // Logradouro
+  number       String   @default("s/n")
   neighborhood String?
   city         String
   state        String   // UF

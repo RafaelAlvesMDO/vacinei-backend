@@ -8,6 +8,7 @@ export const professionalSelect = {
   createdAt: true,
   professionalRegistry: {
     select: {
+      category: true,
       council: true,
       registryNumber: true,
       uf: true,
@@ -52,7 +53,7 @@ export function toProfessionalResponse({ professionalRegistry: registry, ...user
     email: user.email,
     isActive: user.isActive,
     createdAt: user.createdAt,
-    category: registry?.council ?? null,
+    category: registry?.category ?? null,
     registry: registry
       ? { council: registry.council, registryNumber: registry.registryNumber, uf: registry.uf }
       : null,
