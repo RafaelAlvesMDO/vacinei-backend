@@ -5,8 +5,8 @@ export const COUNCIL_BY_CATEGORY: Record<ProfessionalCategory, string> = {
   MEDICO: 'CRM',
   ENFERMEIRO: 'COREN',
   TECNICO_ENFERMAGEM: 'COREN',
+  AUXILIAR_ENFERMAGEM: 'COREN',
   FARMACEUTICO: 'CRF',
-  CIRURGIAO_DENTISTA: 'CRO',
 };
 
 // Número do registro com sufixo de UF opcional (ex: 123456 ou 123456-AL)

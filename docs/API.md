@@ -95,8 +95,8 @@ Senha de todos: **`Vacinei@2026`**
   - `birthDate`: `YYYY-MM-DD` ou ISO.
   - `role`: `CIDADAO` (padrão) ou `PROFISSIONAL_SAUDE`. `ADMIN` só com token de ADMIN.
   - `professionalRegistry`: `{ category, registryNumber, uf? }`, obrigatório para `PROFISSIONAL_SAUDE`.
-    - `category`: `MEDICO | ENFERMEIRO | TECNICO_ENFERMAGEM | FARMACEUTICO | CIRURGIAO_DENTISTA`.
-    - O `council` **não é enviado**: o backend deriva da categoria (MEDICO → CRM; ENFERMEIRO e TECNICO_ENFERMAGEM → COREN; FARMACEUTICO → CRF; CIRURGIAO_DENTISTA → CRO).
+    - `category`: `MEDICO | ENFERMEIRO | TECNICO_ENFERMAGEM | AUXILIAR_ENFERMAGEM | FARMACEUTICO`.
+    - O `council` **não é enviado**: o backend deriva da categoria (MEDICO → CRM; ENFERMEIRO, TECNICO_ENFERMAGEM e AUXILIAR_ENFERMAGEM → COREN; FARMACEUTICO → CRF).
     - `registryNumber`: até 20 caracteres alfanuméricos, com sufixo `-UF` opcional (ex: `123456` ou `123456-AL`). É salvo sem o sufixo.
     - `uf`: obrigatório se o número não tiver o sufixo `-UF`. Se vierem os dois, precisam ser iguais.
 - **201:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, professionalRegistry }`. O profissional criado no cadastro público nasce com `isVerified = false` e fica pendente de verificação pelo admin. Se quem cria é um ADMIN, ele nasce com `isVerified = true`, `verifiedAt` = agora e `verifiedById` = id do admin.

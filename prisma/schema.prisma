@@ -25,8 +25,8 @@ enum ProfessionalCategory {
   MEDICO
   ENFERMEIRO
   TECNICO_ENFERMAGEM
+  AUXILIAR_ENFERMAGEM
   FARMACEUTICO
-  CIRURGIAO_DENTISTA
 }
 
 enum TargetAudience {
@@ -93,7 +93,7 @@ model ProfessionalRegistry {
   id             String    @id @default(uuid())
   userId         String    @unique @map("user_id")
   category       ProfessionalCategory
-  council        String    // Derivado da categoria: CRM, COREN, CRF, CRO
+  council        String    // Derivado da categoria: CRM, COREN, CRF
   registryNumber String    @map("registry_number")
   uf             String    // Sigla do estado (ex: AL, SP)
   isVerified     Boolean   @default(false) @map("is_verified")

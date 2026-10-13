@@ -23,8 +23,13 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Requisito:** RS001.
 
 ### D12 — Conselho derivado da categoria profissional
-- **Decisão:** o cliente informa a categoria (`MEDICO`, `ENFERMEIRO`, `TECNICO_ENFERMAGEM`, `FARMACEUTICO`, `CIRURGIAO_DENTISTA`) e o backend deriva o conselho (CRM, COREN, CRF, CRO). A UF do registro vem no campo `uf` ou como sufixo do número (`123456-AL`).
+- **Decisão:** o cliente informa a categoria (lista em D13) e o backend deriva o conselho (CRM, COREN, CRF). A UF do registro vem no campo `uf` ou como sufixo do número (`123456-AL`).
 - **Motivo:** evita combinações inválidas de categoria e conselho e mantém a regra no backend (D01).
+- **Requisito:** RF001, RS001.
+
+### D13 — Categorias profissionais restritas à vacinação
+- **Decisão:** as categorias aceitas são `MEDICO` (CRM), `ENFERMEIRO`, `TECNICO_ENFERMAGEM`, `AUXILIAR_ENFERMAGEM` (COREN) e `FARMACEUTICO` (CRF). `CIRURGIAO_DENTISTA` (CRO) foi removida e `AUXILIAR_ENFERMAGEM` adicionada.
+- **Motivo:** só entram categorias que atuam na aplicação de vacinas ou no acompanhamento dos indicadores.
 - **Requisito:** RF001, RS001.
 
 ### D04 — Código de recuperação salvo como hash e resposta genérica
