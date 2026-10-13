@@ -1,9 +1,10 @@
 import { prisma } from '../../../config/prisma';
 import { AppError } from '../../../errors/AppError';
 import { UpdateUserDTO } from '../dtos/user.dto';
+import { maskCpf } from '../../../utils/cpf';
 
 export class UpdateUserService {
-  async execute(userId: string, data: UpdateUserDTO) {
+  async execute(userId: string, data: UpdateUserDTO, requesterId: string) {
     const userExists = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -35,6 +36,9 @@ export class UpdateUserService {
       },
     });
 
-    return updatedUser;
+    // LGPD: CPF completo só para o próprio titular
+    if (requesterId === userId) return updatedUser;
+
+    return { ...updatedUser, cpf: maskCpf(updatedUser.cpf) };
   }
 }

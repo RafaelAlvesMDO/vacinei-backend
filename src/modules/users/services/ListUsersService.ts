@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../../config/prisma';
 import { ListUsersQueryDTO } from '../dtos/user.dto';
+import { maskCpf, normalizeCpf } from '../../../utils/cpf';
 
 export class ListUsersService {
   async execute({ role, search, page = 1, limit = 20 }: ListUsersQueryDTO) {
@@ -11,10 +12,13 @@ export class ListUsersService {
     }
 
     if (search) {
+      // CPF é salvo só com dígitos; o termo pode vir com máscara
+      const cpfDigits = normalizeCpf(search);
+
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
-        { cpf: { contains: search, mode: 'insensitive' } },
+        ...(cpfDigits ? [{ cpf: { contains: cpfDigits } }] : []),
       ];
     }
 
@@ -46,7 +50,8 @@ export class ListUsersService {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-      users,
+      // LGPD: listagens nunca expõem o CPF completo
+      users: users.map((user) => ({ ...user, cpf: maskCpf(user.cpf) })),
     };
   }
 }
