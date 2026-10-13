@@ -281,7 +281,8 @@ Objeto `Ubs`: `{ id, cnes, name, zipCode, address (logradouro), number, neighbor
 - **Body (RF008):** `{ name, zipCode, address, number, neighborhood, city, state (UF), latitude, longitude, openingHours, phone?, cnes? }`
   - `zipCode`: 8 dígitos, com ou sem hífen. É salvo como `00000-000`.
   - `address`: logradouro. `number`: número do endereço, ou `"s/n"`.
-  - `openingHours`: texto livre (ex: `"07:00 às 17:00"`).
+  - `openingHours`: padrão do Gerenciador Web. Faixas separadas por `" · "`, cada uma no formato `"<dias>: HH:MM às HH:MM"`. Dias: `Seg`, `Ter`, `Qua`, `Qui`, `Sex`, `Sáb`, `Dom`. Dias consecutivos são agrupados (`"Seg a Sex"`) e dias soltos são separados por vírgula (`"Seg, Qua"`). Fora do padrão retorna `400`.
+    - Ex: `"Seg a Sex: 07:00 às 17:00 · Sáb: 07:00 às 14:00"`
 - **201:** `data: Ubs` (nasce ativa)
 - **Erros:** `400`, `401`, `403`, `409` (CNES duplicado).
 
