@@ -13,6 +13,19 @@ function daysAgo(days: number): Date {
   return date;
 }
 
+// CPF válido e determinístico (só dígitos) a partir de uma base de 9 dígitos
+function generateCpf(base: number): string {
+  const digits = String(base).padStart(9, '0').split('').map(Number);
+
+  for (const length of [9, 10]) {
+    const sum = digits.reduce((acc, digit, i) => acc + digit * (length + 1 - i), 0);
+    const rest = (sum * 10) % 11;
+    digits.push(rest === 10 ? 0 : rest);
+  }
+
+  return digits.join('');
+}
+
 // Perfis de caderneta: dias atrás de cada dose aplicada, em ordem de dose.
 // Datas relativas a hoje mantêm o status coerente sempre que o seed roda.
 type VaccinationProfile = {
@@ -156,8 +169,9 @@ async function main() {
       name: 'Administrador do Sistema',
       email: 'admin@vacinei.com.br',
       passwordHash: defaultPasswordHash,
-      cpf: '000.000.000-00',
+      cpf: generateCpf(100000001),
       phone: '82999990001',
+      birthDate: new Date('1985-09-02'),
       role: UserRole.ADMIN,
       isActive: true,
     },
@@ -168,7 +182,7 @@ async function main() {
       name: 'Enf. Mariana Costa',
       email: 'mariana.costa@vacinei.com.br',
       passwordHash: defaultPasswordHash,
-      cpf: '111.111.111-11',
+      cpf: generateCpf(100000002),
       phone: '82999990002',
       birthDate: new Date('1990-03-10'),
       role: UserRole.PROFISSIONAL_SAUDE,
@@ -192,7 +206,7 @@ async function main() {
       name: 'Carlos Eduardo Souza',
       email: 'carlos.souza@vacinei.com.br',
       passwordHash: defaultPasswordHash,
-      cpf: '222.222.222-22',
+      cpf: generateCpf(100000003),
       phone: '82999990003',
       birthDate: new Date('1992-05-14'),
       role: UserRole.CIDADAO,
@@ -202,14 +216,14 @@ async function main() {
           {
             name: 'Enzo Gabriel Souza',
             birthDate: new Date('2024-03-15'),
-            cpf: '333.333.333-33',
+            cpf: generateCpf(200000001),
             relationship: 'FILHO',
             gender: 'M',
           },
           {
             name: 'Valentina Souza',
             birthDate: new Date('2021-08-20'),
-            cpf: '444.444.444-44',
+            cpf: generateCpf(200000002),
             relationship: 'FILHA',
             gender: 'F',
           },
@@ -224,7 +238,7 @@ async function main() {
       name: 'Téc. Paulo Ribeiro',
       email: 'paulo.ribeiro@vacinei.com.br',
       passwordHash: defaultPasswordHash,
-      cpf: '555.555.555-55',
+      cpf: generateCpf(100000004),
       phone: '82999990004',
       birthDate: new Date('1995-07-22'),
       role: UserRole.PROFISSIONAL_SAUDE,
@@ -949,7 +963,7 @@ async function main() {
         name: entry.name,
         email: `cidadao${number}@vacinei.com.br`,
         passwordHash: defaultPasswordHash,
-        cpf: `600.000.0${number}-${number}`,
+        cpf: generateCpf(600000000 + index + 1),
         phone: `829888800${number}`,
         birthDate: profile.bornDaysAgo !== undefined
           ? daysAgo(profile.bornDaysAgo - shift)
