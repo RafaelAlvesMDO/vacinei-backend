@@ -1,16 +1,17 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { prisma } from '../../../config/prisma';
 import { calculateDistanceInKm } from '../../../utils/distance';
 import { ListUbsQueryDTO } from '../dtos/ubs.dto';
 
 export class ListUbsService {
-  async execute(query: ListUbsQueryDTO) {
-    const { search, city, state, latitude, longitude, radiusKm = 15, isActive = true } = query;
+  // Público vê só UBSs ativas; ADMIN pode incluir as desativadas com includeInactive
+  async execute(query: ListUbsQueryDTO, requesterRole?: UserRole) {
+    const { search, city, state, latitude, longitude, radiusKm = 15, includeInactive } = query;
 
     const where: Prisma.UbsWhereInput = {};
 
-    if (isActive !== undefined) {
-      where.isActive = isActive;
+    if (!(includeInactive && requesterRole === UserRole.ADMIN)) {
+      where.isActive = true;
     }
 
     if (city) {

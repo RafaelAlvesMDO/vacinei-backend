@@ -2,20 +2,21 @@ import { Request, Response } from 'express';
 import {
   createUbsSchema,
   updateUbsSchema,
+  updateUbsStatusSchema,
   listUbsQuerySchema,
 } from '../dtos/ubs.dto';
 import { ListUbsService } from '../services/ListUbsService';
 import { GetUbsService } from '../services/GetUbsService';
 import { CreateUbsService } from '../services/CreateUbsService';
 import { UpdateUbsService } from '../services/UpdateUbsService';
-import { DeleteUbsService } from '../services/DeleteUbsService';
+import { UpdateUbsStatusService } from '../services/UpdateUbsStatusService';
 
 export class UbsController {
   async index(req: Request, res: Response): Promise<Response> {
     const query = listUbsQuerySchema.parse(req.query);
 
     const listUbsService = new ListUbsService();
-    const ubss = await listUbsService.execute(query);
+    const ubss = await listUbsService.execute(query, req.user?.role);
 
     return res.status(200).json({
       status: 'success',
@@ -60,15 +61,16 @@ export class UbsController {
     });
   }
 
-  async delete(req: Request, res: Response): Promise<Response> {
+  async updateStatus(req: Request, res: Response): Promise<Response> {
     const id = req.params.id as string;
+    const validatedData = updateUbsStatusSchema.parse(req.body);
 
-    const deleteUbsService = new DeleteUbsService();
-    const result = await deleteUbsService.execute(id);
+    const updateUbsStatusService = new UpdateUbsStatusService();
+    const ubs = await updateUbsStatusService.execute(id, validatedData);
 
     return res.status(200).json({
       status: 'success',
-      data: result,
+      data: ubs,
     });
   }
 }
