@@ -46,15 +46,13 @@ export class CreateUserService {
       throw new AppError('Já existe um usuário cadastrado com este e-mail.', 409);
     }
 
-    // 2. Verifica duplicidade de CPF se fornecido
-    if (cpf) {
-      const cpfAlreadyInUse = await prisma.user.findUnique({
-        where: { cpf },
-      });
+    // 2. Verifica duplicidade de CPF (já normalizado para 11 dígitos no DTO)
+    const cpfAlreadyInUse = await prisma.user.findUnique({
+      where: { cpf },
+    });
 
-      if (cpfAlreadyInUse) {
-        throw new AppError('Já existe um usuário cadastrado com este CPF.', 409);
-      }
+    if (cpfAlreadyInUse) {
+      throw new AppError('Já existe um usuário cadastrado com este CPF.', 409);
     }
 
     // 3. Validação do Registro Profissional (RS001); council derivado da categoria
@@ -88,9 +86,9 @@ export class CreateUserService {
         name,
         email,
         passwordHash,
-        cpf: cpf || null,
+        cpf,
         phone,
-        birthDate: birthDate ? new Date(birthDate) : null,
+        birthDate: new Date(birthDate),
         role,
         ...(registry
           ? {
