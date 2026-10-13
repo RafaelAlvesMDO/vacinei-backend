@@ -44,6 +44,19 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** LGPD, princípio da necessidade: a função de gestão não exige dado pessoal de saúde.
 - **Requisito:** relatórios/dashboard; LGPD.
 
+### D14 — CPF e data de nascimento obrigatórios; CPF mascarado para terceiros
+- **Decisão:** CPF e data de nascimento são obrigatórios no cadastro de todos os perfis.
+  - O CPF é aceito com ou sem máscara, validado pelos dígitos verificadores, salvo só com os 11 números e único (409 se repetido).
+  - A data de nascimento não pode ser futura.
+  - O CPF completo só aparece para o próprio titular (`/users/me`, login, cadastro). Em listagens e em respostas sobre outra pessoa (admin, busca de cidadãos), ele vem mascarado (`***.123.456-**`).
+  - O profissional encontra um cidadão pelo CPF completo (busca exata em `GET /citizens`) e recebe de volta só a versão mascarada.
+- **Motivo:**
+  - Finalidade do CPF: identificar a pessoa de forma inequívoca no atendimento (RF010), evitando confusão entre homônimos e cadastros duplicados.
+  - Finalidade da data de nascimento: base do calendário vacinal (RF007).
+  - LGPD: princípios da finalidade, necessidade e minimização. Quem já tem o CPF em mãos confirma a identidade, mas a API não divulga o número a terceiros.
+- **Observação:** no banco as colunas continuam aceitando nulo por causa de registros antigos. A obrigatoriedade é garantida pela validação (Zod) no cadastro.
+- **Requisito:** RF001, RF007, RF010; LGPD.
+
 ## Caderneta
 
 ### D06 — Registro pelo cidadão → confirmação pelo profissional

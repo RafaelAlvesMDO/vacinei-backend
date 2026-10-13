@@ -38,6 +38,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
    - **Perfis de Acesso:** `CIDADAO`, `PROFISSIONAL_SAUDE` e `ADMIN`.
    - **Validação de Registro Profissional (RS001):** Tabela `professional_registries` com unicidade composta `[council, registryNumber, uf]`.
    - **Categoria profissional (2026-10-12, D12):** enum `ProfessionalCategory` em `professional_registries`; `council` derivado no backend (`src/utils/professionalCouncil.ts`). UF via campo `uf` ou sufixo `-UF` do número. Categorias (D13): MEDICO, ENFERMEIRO, TECNICO_ENFERMAGEM, AUXILIAR_ENFERMAGEM, FARMACEUTICO.
+   - **CPF e data de nascimento (2026-10-12, D14):** obrigatórios no cadastro de todos os perfis. CPF validado pelos dígitos verificadores, salvo só com números (migration `normaliza_cpf_somente_digitos`), único e mascarado para terceiros (`src/utils/cpf.ts`). `birthDate` não pode ser futura. No banco as colunas seguem aceitando nulo.
    - **Profissional também é cidadão (2026-10-12, D11):** `CITIZEN_ROLES` (`src/utils/citizenRoles.ts`) = `CIDADAO` + `PROFISSIONAL_SAUDE` na busca, caderneta, confirmação e dashboard; autoconfirmação bloqueada (403, RS006).
    - **Recuperação de Senha (2026-10-10):** Código de 6 dígitos (`crypto.randomInt`) salvo apenas como hash SHA-256, validade de 10 min; novo pedido invalida códigos anteriores. 3 erros bloqueiam por 15 min via `blockedUntil` e invalidam o código; durante o bloqueio, `forgot-password` não gera novo código (evita burlar o bloqueio). Reset bem-sucedido troca a senha e revoga todos os refresh tokens em transação. `forgot-password` sempre retorna a mesma resposta (anti-enumeração).
    - **MailProvider (`src/providers/MailProvider`):** Nodemailer configurado por `SMTP_*`/`MAIL_FROM`; sem SMTP configurado, o e-mail é exibido no console (modo de teste local).
@@ -102,7 +103,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - `POST /auth/reset-password`: Valida código (3 tentativas, bloqueio de 15 min), redefine a senha e revoga sessões.
 
 ### 4.2. Usuários / Contas (`/users`)
-- `POST /users`: Cadastro de cidadão ou profissional de saúde conforme RF001 (nome com 2+ palavras até 120, celular com 11 dígitos, e-mail até 100; profissional com `category` + `registryNumber`; pendente no cadastro público, verificado se criado por ADMIN). `ADMIN` só com token de ADMIN.
+- `POST /users`: Cadastro de cidadão ou profissional de saúde conforme RF001 (nome com 2+ palavras até 120, celular com 11 dígitos, e-mail até 100, CPF válido e único, data de nascimento não futura; profissional com `category` + `registryNumber`; pendente no cadastro público, verificado se criado por ADMIN). `ADMIN` só com token de ADMIN.
 - `GET /users/me`: Perfil do próprio usuário logado.
 - `PUT /users/me`: Atualização cadastral do próprio usuário.
 - `DELETE /users/me`: Desativação da própria conta com revogação de sessões ativas.
@@ -127,7 +128,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 
 ### 4.5. Caderneta e Confirmação Presencial (`/vaccination-records`, `/citizens`)
 - `POST /vaccination-records/confirm`: Confirmação presencial de dose (profissional verificado). `confirmedAt` = agora, profissional = sessão; registro existente mantém a `applicationDate` original. Cria registro `SISTEMA_PRESENCIAL`/`CONFIRMADO` ou promove registro manual/OCR existente a `CONFIRMADO` (RF007 nota 7); 409 se já confirmado.
-- `GET /citizens?search=`: Busca de cidadão por nome via `unaccent` + `ILIKE` (profissional verificado), CPF mascarado, até 20 resultados.
+- `GET /citizens?search=`: Busca de cidadão por CPF exato (termo com 11 dígitos, com ou sem máscara) ou por nome via `unaccent` + `ILIKE` (profissional verificado), CPF mascarado, até 20 resultados.
 - `GET /citizens/:id/vaccination-records`: Caderneta agrupada por vacina com status calculado (titular ou profissional verificado).
 
 ### 4.6. Dashboard do Profissional (`/dashboard`, profissional verificado)

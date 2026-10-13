@@ -87,40 +87,41 @@ Senha de todos: **`Vacinei@2026`**
 
 ### POST `/users` (cadastro)
 - **Acesso:** Público. Token opcional: com token de ADMIN, também é possível criar outro ADMIN, e o profissional criado já nasce verificado.
-- **Body:** `{ name, email, password, phone, cpf?, birthDate?, role?, professionalRegistry? }` (RF001)
+- **Body:** `{ name, email, password, phone, cpf, birthDate, role?, professionalRegistry? }` (RF001). `cpf` e `birthDate` são obrigatórios para todos os perfis (D14).
   - `name`: até 120 caracteres, com nome e sobrenome (mínimo duas palavras).
   - `email`: até 100 caracteres, único.
   - `password`: segue a regra de senha.
+  - `cpf`: com ou sem máscara (`529.982.247-25` ou `52998224725`), com dígitos verificadores válidos. Sequências repetidas (`111.111.111-11`) são rejeitadas. É salvo só com os 11 números e é único.
   - `phone`: celular só com números, DDD + 9 dígitos (11 dígitos, ex: `82999990002`).
-  - `birthDate`: `YYYY-MM-DD` ou ISO.
+  - `birthDate`: `YYYY-MM-DD` ou ISO 8601 em UTC. Precisa ser uma data existente e não pode ser futura. É usada pelo calendário vacinal (RF007).
   - `role`: `CIDADAO` (padrão) ou `PROFISSIONAL_SAUDE`. `ADMIN` só com token de ADMIN.
   - `professionalRegistry`: `{ category, registryNumber, uf? }`, obrigatório para `PROFISSIONAL_SAUDE`.
     - `category`: `MEDICO | ENFERMEIRO | TECNICO_ENFERMAGEM | AUXILIAR_ENFERMAGEM | FARMACEUTICO`.
     - O `council` **não é enviado**: o backend deriva da categoria (MEDICO → CRM; ENFERMEIRO, TECNICO_ENFERMAGEM e AUXILIAR_ENFERMAGEM → COREN; FARMACEUTICO → CRF).
     - `registryNumber`: até 20 caracteres alfanuméricos, com sufixo `-UF` opcional (ex: `123456` ou `123456-AL`). É salvo sem o sufixo.
     - `uf`: obrigatório se o número não tiver o sufixo `-UF`. Se vierem os dois, precisam ser iguais.
-- **201:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, professionalRegistry }`. O profissional criado no cadastro público nasce com `isVerified = false` e fica pendente de verificação pelo admin. Se quem cria é um ADMIN, ele nasce com `isVerified = true`, `verifiedAt` = agora e `verifiedById` = id do admin.
+- **201:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, professionalRegistry }`, com `cpf` só com números. O profissional criado no cadastro público nasce com `isVerified = false` e fica pendente de verificação pelo admin. Se quem cria é um ADMIN, ele nasce com `isVerified = true`, `verifiedAt` = agora e `verifiedById` = id do admin.
 - **Erros:**
-  - `400`: validação, inclusive senha fraca.
+  - `400`: validação, inclusive senha fraca, CPF inválido e data de nascimento futura.
   - `401`: token enviado, mas inválido.
   - `403`: `Apenas administradores podem criar contas de administrador.`
   - `409`: e-mail, CPF ou registro profissional já cadastrado.
 
 ### GET `/users`
 - **Acesso:** ADMIN
-- **Query:** `role?`, `search?` (nome, e-mail ou CPF), `page?` (padrão 1), `limit?` (padrão 20, máximo 100)
-- **200:** `data: { total, page, limit, totalPages, users: [{ id, name, email, cpf, phone, role, isActive, createdAt, professionalRegistry }] }`
+- **Query:** `role?`, `search?` (nome, e-mail ou CPF, com ou sem máscara), `page?` (padrão 1), `limit?` (padrão 20, máximo 100)
+- **200:** `data: { total, page, limit, totalPages, users: [{ id, name, email, cpf: "***.123.456-**", phone, role, isActive, createdAt, professionalRegistry }] }`. CPF sempre mascarado.
 - **Erros:** `400`, `401`, `403`.
 
 ### GET `/users/me` · GET `/users/:id`
 - **Acesso:** Autenticado. O usuário só consulta a si mesmo; ADMIN consulta qualquer um.
-- **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, updatedAt, professionalRegistry, dependents[] }`
+- **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, updatedAt, professionalRegistry, dependents[] }`. O CPF (do usuário e dos dependentes) vem completo só para o próprio titular. Quando o ADMIN consulta outra pessoa, ele vem mascarado.
 - **Erros:** `401`, `403`, `404`.
 
 ### PUT `/users/me` · PUT `/users/:id`
 - **Acesso:** Autenticado. O usuário só edita a si mesmo; ADMIN edita qualquer um.
-- **Body:** todos os campos são opcionais: `{ name?, phone?, birthDate?, avatarUrl?, isActive? }`. `name` e `phone` seguem as mesmas regras do cadastro. Senha não é alterada por esta rota.
-- **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, updatedAt }`
+- **Body:** todos os campos são opcionais: `{ name?, phone?, birthDate?, avatarUrl?, isActive? }`. `name`, `phone` e `birthDate` seguem as mesmas regras do cadastro. Senha e CPF não são alterados por esta rota.
+- **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, updatedAt }`. O CPF vem mascarado quando o ADMIN edita outra pessoa.
 - **Erros:** `400`, `401`, `403`, `404`.
 
 ### DELETE `/users/me` · DELETE `/users/:id`
@@ -182,7 +183,7 @@ Objeto `Professional`:
 
 ### GET `/citizens`
 - **Acesso:** Profissional verificado
-- **Query:** `search` (2 a 100 caracteres). A busca por nome ignora acentos e maiúsculas.
+- **Query:** `search` (2 a 100 caracteres). Se o termo for um CPF completo (11 dígitos, com ou sem máscara), a busca é pelo CPF exato. Senão, a busca é por nome, ignorando acentos e maiúsculas (RF010 nota 1).
 - **200:** `data: [{ id, name, birthDate, cpf: "***.123.456-**", role }]`. Retorna no máximo 20 usuários ativos (`CIDADAO` ou `PROFISSIONAL_SAUDE`), com CPF mascarado.
 - **Erros:** `400`, `401`, `403`.
 
