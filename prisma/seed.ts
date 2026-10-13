@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, TargetAudience, RecordOrigin, VaccineStatus } from '@prisma/client';
+import { PrismaClient, UserRole, TargetAudience, RecordOrigin, VaccineStatus, ProfessionalCategory } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -157,7 +157,7 @@ async function main() {
       email: 'admin@vacinei.com.br',
       passwordHash: defaultPasswordHash,
       cpf: '000.000.000-00',
-      phone: '(82) 99999-0001',
+      phone: '82999990001',
       role: UserRole.ADMIN,
       isActive: true,
     },
@@ -169,11 +169,13 @@ async function main() {
       email: 'mariana.costa@vacinei.com.br',
       passwordHash: defaultPasswordHash,
       cpf: '111.111.111-11',
-      phone: '(82) 99999-0002',
+      phone: '82999990002',
+      birthDate: new Date('1990-03-10'),
       role: UserRole.PROFISSIONAL_SAUDE,
       isActive: true,
       professionalRegistry: {
         create: {
+          category: ProfessionalCategory.ENFERMEIRO,
           council: 'COREN',
           registryNumber: '123456',
           uf: 'AL',
@@ -191,7 +193,7 @@ async function main() {
       email: 'carlos.souza@vacinei.com.br',
       passwordHash: defaultPasswordHash,
       cpf: '222.222.222-22',
-      phone: '(82) 99999-0003',
+      phone: '82999990003',
       birthDate: new Date('1992-05-14'),
       role: UserRole.CIDADAO,
       isActive: true,
@@ -219,15 +221,17 @@ async function main() {
   // Profissional com registro ainda não verificado (para testar o 403 do RF010)
   const unverifiedProfessional = await prisma.user.create({
     data: {
-      name: 'Enf. Paulo Ribeiro',
+      name: 'Téc. Paulo Ribeiro',
       email: 'paulo.ribeiro@vacinei.com.br',
       passwordHash: defaultPasswordHash,
       cpf: '555.555.555-55',
-      phone: '(82) 99999-0004',
+      phone: '82999990004',
+      birthDate: new Date('1995-07-22'),
       role: UserRole.PROFISSIONAL_SAUDE,
       isActive: true,
       professionalRegistry: {
         create: {
+          category: ProfessionalCategory.TECNICO_ENFERMAGEM,
           council: 'COREN',
           registryNumber: '654321',
           uf: 'AL',
@@ -248,7 +252,8 @@ async function main() {
     {
       cnes: '2009803',
       name: 'PAM Salgadinho (Sede de Especialidades)',
-      address: 'Rua Mizael Domingues, 241',
+      address: 'Rua Mizael Domingues',
+      number: '241',
       neighborhood: 'Centro',
       city: 'Maceió',
       state: 'AL',
@@ -261,7 +266,8 @@ async function main() {
     {
       cnes: '2011603',
       name: 'UBS Dr. Osvaldo Brandão Vilela',
-      address: 'Rua Lafaiete Pacheco, s/n',
+      address: 'Rua Lafaiete Pacheco',
+      number: 's/n',
       neighborhood: 'Ponta da Terra',
       city: 'Maceió',
       state: 'AL',
@@ -274,7 +280,8 @@ async function main() {
     {
       cnes: '2009706',
       name: 'USF Reginaldo',
-      address: 'Rua Doutor Carlos Miranda, 96',
+      address: 'Rua Doutor Carlos Miranda',
+      number: '96',
       neighborhood: 'Poço',
       city: 'Maceió',
       state: 'AL',
@@ -289,7 +296,8 @@ async function main() {
     {
       cnes: '2009757',
       name: 'UBS Roland Simon (PAM Vergel)',
-      address: 'Rua Cabo Reis, s/n',
+      address: 'Rua Cabo Reis',
+      number: 's/n',
       neighborhood: 'Vergel do Lago',
       city: 'Maceió',
       state: 'AL',
@@ -302,7 +310,8 @@ async function main() {
     {
       cnes: '2009838',
       name: 'USF Dr. Tarcísio Palmeira',
-      address: 'Avenida Alípio Barbosa da Silva, s/n',
+      address: 'Avenida Alípio Barbosa da Silva',
+      number: 's/n',
       neighborhood: 'Pontal da Barra',
       city: 'Maceió',
       state: 'AL',
@@ -315,7 +324,8 @@ async function main() {
     {
       cnes: '2009870',
       name: 'USF Prof. Durval Cortez',
-      address: 'Rua Doutor Dionísio Lopes, 10',
+      address: 'Rua Doutor Dionísio Lopes',
+      number: '10',
       neighborhood: 'Prado',
       city: 'Maceió',
       state: 'AL',
@@ -328,7 +338,8 @@ async function main() {
     {
       cnes: '2009811',
       name: 'UBS PAM Dique Estrada',
-      address: 'Rua das Flores, s/n, Conjunto Joaquim Leão',
+      address: 'Rua das Flores, Conjunto Joaquim Leão',
+      number: 's/n',
       neighborhood: 'Ponta Grossa',
       city: 'Maceió',
       state: 'AL',
@@ -341,7 +352,8 @@ async function main() {
     {
       cnes: '2005473',
       name: 'USF José Guedes de Farias',
-      address: 'Rua Santa Maria, s/n',
+      address: 'Rua Santa Maria',
+      number: 's/n',
       neighborhood: 'Trapiche da Barra',
       city: 'Maceió',
       state: 'AL',
@@ -356,7 +368,8 @@ async function main() {
     {
       cnes: '2005808',
       name: 'UBS Pitanguinha (USF Vale do Pitanguinha)',
-      address: 'Rua Antônio Nogueira, s/n',
+      address: 'Rua Antônio Nogueira',
+      number: 's/n',
       neighborhood: 'Pitanguinha',
       city: 'Maceió',
       state: 'AL',
@@ -369,7 +382,8 @@ async function main() {
     {
       cnes: '2003325',
       name: 'UBS Dr. Aliomar Almeida Lins',
-      address: 'Rua Goiás, 140',
+      address: 'Rua Goiás',
+      number: '140',
       neighborhood: 'Farol',
       city: 'Maceió',
       state: 'AL',
@@ -382,7 +396,8 @@ async function main() {
     {
       cnes: '9306471',
       name: 'UBS Maria Tereza Holanda Costa',
-      address: 'Rua Padre Cícero, 224',
+      address: 'Rua Padre Cícero',
+      number: '224',
       neighborhood: 'Ouro Preto',
       city: 'Maceió',
       state: 'AL',
@@ -395,7 +410,8 @@ async function main() {
     {
       cnes: '2005794',
       name: 'USF São José',
-      address: 'Rua Projetada, s/n',
+      address: 'Rua Projetada',
+      number: 's/n',
       neighborhood: 'Canaã',
       city: 'Maceió',
       state: 'AL',
@@ -408,7 +424,8 @@ async function main() {
     {
       cnes: '2005840',
       name: 'UBS Gruta de Lourdes',
-      address: 'Rua Hugo Corrêa Paes, s/n',
+      address: 'Rua Hugo Corrêa Paes',
+      number: 's/n',
       neighborhood: 'Gruta de Lourdes',
       city: 'Maceió',
       state: 'AL',
@@ -423,7 +440,8 @@ async function main() {
     {
       cnes: '3020738',
       name: 'UBS Geraldo Melo',
-      address: 'Rua General Hermes, s/n',
+      address: 'Rua General Hermes',
+      number: 's/n',
       neighborhood: 'Bom Parto',
       city: 'Maceió',
       state: 'AL',
@@ -436,7 +454,8 @@ async function main() {
     {
       cnes: '2005638',
       name: 'USF Dr. Antônio de Pádua',
-      address: 'Rua Tobias Barreto, s/n',
+      address: 'Rua Tobias Barreto',
+      number: 's/n',
       neighborhood: 'Bebedouro',
       city: 'Maceió',
       state: 'AL',
@@ -449,7 +468,8 @@ async function main() {
     {
       cnes: '2005646',
       name: 'USF Edvaldo Silva',
-      address: 'Rua Cel. Othon Bezerra de Melo, 01',
+      address: 'Rua Cel. Othon Bezerra de Melo',
+      number: '01',
       neighborhood: 'Fernão Velho',
       city: 'Maceió',
       state: 'AL',
@@ -462,7 +482,8 @@ async function main() {
     {
       cnes: '2005700',
       name: 'USF Rio Novo',
-      address: 'Rua Tobias Barreto, s/n',
+      address: 'Rua Tobias Barreto',
+      number: 's/n',
       neighborhood: 'Rio Novo',
       city: 'Maceió',
       state: 'AL',
@@ -475,7 +496,8 @@ async function main() {
     {
       cnes: '2005719',
       name: 'USF Chã de Bebedouro',
-      address: 'Rua Santo Antônio, s/n',
+      address: 'Rua Santo Antônio',
+      number: 's/n',
       neighborhood: 'Chã de Bebedouro',
       city: 'Maceió',
       state: 'AL',
@@ -488,7 +510,8 @@ async function main() {
     {
       cnes: '2005727',
       name: 'USF Petrópolis',
-      address: 'Rua Santa Rita, s/n',
+      address: 'Rua Santa Rita',
+      number: 's/n',
       neighborhood: 'Petrópolis',
       city: 'Maceió',
       state: 'AL',
@@ -503,7 +526,8 @@ async function main() {
     {
       cnes: '2005481',
       name: 'UBS José Araújo Silva',
-      address: 'Rua Coronel Paranhos, s/n',
+      address: 'Rua Coronel Paranhos',
+      number: 's/n',
       neighborhood: 'Jacintinho',
       city: 'Maceió',
       state: 'AL',
@@ -516,7 +540,8 @@ async function main() {
     {
       cnes: '2005611',
       name: 'UBS Waldomiro Alencar',
-      address: 'Travessa Cleto Campelo, s/n',
+      address: 'Travessa Cleto Campelo',
+      number: 's/n',
       neighborhood: 'Jacintinho',
       city: 'Maceió',
       state: 'AL',
@@ -529,7 +554,8 @@ async function main() {
     {
       cnes: '2005654',
       name: 'USF Dr. Paulo Leal',
-      address: 'Rua Acre, 96',
+      address: 'Rua Acre',
+      number: '96',
       neighborhood: 'Feitosa',
       city: 'Maceió',
       state: 'AL',
@@ -542,7 +568,8 @@ async function main() {
     {
       cnes: '2005662',
       name: 'USF José Maria de Vasconcelos Neto',
-      address: 'Rua Santa Madalena, 45',
+      address: 'Rua Santa Madalena',
+      number: '45',
       neighborhood: 'São Jorge',
       city: 'Maceió',
       state: 'AL',
@@ -555,7 +582,8 @@ async function main() {
     {
       cnes: '2005832',
       name: 'UBS José Tenório',
-      address: 'Conjunto Residencial José Tenório, s/n',
+      address: 'Conjunto Residencial José Tenório',
+      number: 's/n',
       neighborhood: 'Serraria',
       city: 'Maceió',
       state: 'AL',
@@ -570,7 +598,8 @@ async function main() {
     {
       cnes: '2005530',
       name: 'UBS Dr. Hamilton Falcão',
-      address: 'Avenida Cachoeira do Meirim, s/n',
+      address: 'Avenida Cachoeira do Meirim',
+      number: 's/n',
       neighborhood: 'Benedito Bentes',
       city: 'Maceió',
       state: 'AL',
@@ -583,7 +612,8 @@ async function main() {
     {
       cnes: '2816873',
       name: 'UBS Dr. Arthur Ramos',
-      address: 'Conjunto Henrique Equelman, s/n',
+      address: 'Conjunto Henrique Equelman',
+      number: 's/n',
       neighborhood: 'Benedito Bentes',
       city: 'Maceió',
       state: 'AL',
@@ -598,7 +628,8 @@ async function main() {
     {
       cnes: '2005565',
       name: 'UBS Dr. Djalma Loureiro',
-      address: 'Rua Nilo Peçanha, s/n',
+      address: 'Rua Nilo Peçanha',
+      number: 's/n',
       neighborhood: 'Clima Bom',
       city: 'Maceió',
       state: 'AL',
@@ -611,7 +642,8 @@ async function main() {
     {
       cnes: '2005786',
       name: 'USF Rosane Collor',
-      address: 'Rua Waldemar Pedro da Silva, 28',
+      address: 'Rua Waldemar Pedro da Silva',
+      number: '28',
       neighborhood: 'Clima Bom',
       city: 'Maceió',
       state: 'AL',
@@ -624,7 +656,8 @@ async function main() {
     {
       cnes: '2003317',
       name: 'USF Denisson Menezes',
-      address: 'Conjunto Denisson Menezes, s/n',
+      address: 'Conjunto Denisson Menezes',
+      number: 's/n',
       neighborhood: 'Tabuleiro do Martins',
       city: 'Maceió',
       state: 'AL',
@@ -637,7 +670,8 @@ async function main() {
     {
       cnes: '6481132',
       name: 'USF Dr. João Macário de Omena Filho',
-      address: 'Rua Onze de Agosto, s/n',
+      address: 'Rua Onze de Agosto',
+      number: 's/n',
       neighborhood: 'Santos Dumont',
       city: 'Maceió',
       state: 'AL',
@@ -650,7 +684,8 @@ async function main() {
     {
       cnes: '9000755',
       name: 'USF Marlene Fernandes Lanverly de Melo',
-      address: 'Rua Manoel Afonso de Melo, s/n',
+      address: 'Rua Manoel Afonso de Melo',
+      number: 's/n',
       neighborhood: 'Santa Lúcia',
       city: 'Maceió',
       state: 'AL',
@@ -663,7 +698,8 @@ async function main() {
     {
       cnes: '2005824',
       name: 'USF Village Campestre I',
-      address: 'Rua E, s/n',
+      address: 'Rua E',
+      number: 's/n',
       neighborhood: 'Cidade Universitária',
       city: 'Maceió',
       state: 'AL',
@@ -678,7 +714,8 @@ async function main() {
     {
       cnes: '2005512',
       name: 'UBS Maria Conceição Fonseca Paranhos',
-      address: 'Avenida Comendador Gustavo Paiva, s/n',
+      address: 'Avenida Comendador Gustavo Paiva',
+      number: 's/n',
       neighborhood: 'Jacarecica',
       city: 'Maceió',
       state: 'AL',
@@ -691,7 +728,8 @@ async function main() {
     {
       cnes: '2009684',
       name: 'USF Lourença de Carvalho (Riacho Doce)',
-      address: 'Rua da Praia, s/n',
+      address: 'Rua da Praia',
+      number: 's/n',
       neighborhood: 'Riacho Doce',
       city: 'Maceió',
       state: 'AL',
@@ -704,7 +742,8 @@ async function main() {
     {
       cnes: '2009714',
       name: 'USF Pescaria',
-      address: 'Rodovia AL-101 Norte, km 14',
+      address: 'Rodovia AL-101 Norte',
+      number: 'km 14',
       neighborhood: 'Pescaria',
       city: 'Maceió',
       state: 'AL',
@@ -717,7 +756,8 @@ async function main() {
     {
       cnes: '2009897',
       name: 'USF David Nasser (Ipioca)',
-      address: 'Rua Almirante Tamandaré, s/n',
+      address: 'Rua Almirante Tamandaré',
+      number: 's/n',
       neighborhood: 'Ipioca',
       city: 'Maceió',
       state: 'AL',
@@ -910,7 +950,7 @@ async function main() {
         email: `cidadao${number}@vacinei.com.br`,
         passwordHash: defaultPasswordHash,
         cpf: `600.000.0${number}-${number}`,
-        phone: `(82) 98888-00${number}`,
+        phone: `829888800${number}`,
         birthDate: profile.bornDaysAgo !== undefined
           ? daysAgo(profile.bornDaysAgo - shift)
           : new Date(profile.birthDate!),
@@ -957,6 +997,49 @@ async function main() {
   }
 
   console.log(`✅ ${CITIZENS.length} cidadãos e ${recordsCount} registros de vacinação criados.`);
+
+  // 6. Cadernetas dos profissionais (D11): o profissional também é cidadão.
+  // Mariana só tem registros próprios (MANUAL/OCR), para testar o 403 do RS006 ao tentar confirmá-los;
+  // Paulo tem doses confirmadas pela Mariana, que é verificada.
+  const professionalRecords: {
+    userId: string;
+    vaccine: string;
+    doseIdx: number;
+    days: number;
+    origin: RecordOrigin;
+  }[] = [
+    { userId: professional.id, vaccine: 'Tríplice Viral (SCR)', doseIdx: 0, days: 200, origin: RecordOrigin.MANUAL },
+    { userId: professional.id, vaccine: 'Tríplice Viral (SCR)', doseIdx: 1, days: 170, origin: RecordOrigin.MANUAL },
+    { userId: professional.id, vaccine: 'Influenza (Gripe)', doseIdx: 0, days: 40, origin: RecordOrigin.OCR_ICR },
+    { userId: unverifiedProfessional.id, vaccine: 'Hepatite B', doseIdx: 0, days: 90, origin: RecordOrigin.SISTEMA_PRESENCIAL },
+    { userId: unverifiedProfessional.id, vaccine: 'Influenza (Gripe)', doseIdx: 0, days: 30, origin: RecordOrigin.SISTEMA_PRESENCIAL },
+    { userId: unverifiedProfessional.id, vaccine: 'Febre Amarela', doseIdx: 0, days: 400, origin: RecordOrigin.MANUAL },
+  ];
+
+  for (const [i, entry] of professionalRecords.entries()) {
+    const doses = dosesByVaccine.get(entry.vaccine);
+    if (!doses) throw new Error(`Vacina não encontrada no seed: ${entry.vaccine}`);
+
+    const isPresencial = entry.origin === RecordOrigin.SISTEMA_PRESENCIAL;
+    const applicationDate = daysAgo(entry.days);
+
+    await prisma.vaccinationRecord.create({
+      data: {
+        userId: entry.userId,
+        doseId: doses[entry.doseIdx].id,
+        applicationDate,
+        confirmedAt: isPresencial ? applicationDate : null,
+        status: isPresencial ? VaccineStatus.CONFIRMADO : VaccineStatus.EM_DIA,
+        origin: entry.origin,
+        ocrConfidence: entry.origin === RecordOrigin.OCR_ICR ? 0.88 : null,
+        lotNumber: `LTP${String(i + 1).padStart(2, '0')}`,
+        appliedById: isPresencial ? professional.id : null,
+        ubsId: isPresencial ? ubsIds[i % ubsIds.length] : null,
+      },
+    });
+  }
+
+  console.log(`✅ ${professionalRecords.length} registros de vacinação nas cadernetas dos profissionais.`);
   console.log(`🔑 Senha de todos os usuários de teste: ${DEFAULT_PASSWORD}`);
   console.log('🚀 Seed concluído com sucesso!');
 }
