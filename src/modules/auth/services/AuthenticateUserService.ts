@@ -7,8 +7,8 @@ import { AppError } from '../../../errors/AppError';
 import { LoginDTO } from '../dtos/auth.dto';
 import { toRegistrySummary } from '../../professionals/services/professionalPresenter';
 
-// Mesmo custo (8) usado em CreateUserService e ResetPasswordService
-const DUMMY_PASSWORD_HASH = bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 8);
+// Mesmo custo das senhas reais, para o tempo de comparação ser igual
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), authConfig.bcryptSaltRounds);
 
 export class AuthenticateUserService {
   async execute({ email, password }: LoginDTO) {

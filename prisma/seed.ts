@@ -1,5 +1,6 @@
 import { PrismaClient, UserRole, TargetAudience, RecordOrigin, VaccineStatus, ProfessionalCategory } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { authConfig } from '../src/config/auth';
 
 const prisma = new PrismaClient();
 
@@ -160,7 +161,7 @@ async function main() {
   await prisma.ubs.deleteMany();
   await prisma.user.deleteMany();
 
-  const defaultPasswordHash = await bcrypt.hash(DEFAULT_PASSWORD, 8);
+  const defaultPasswordHash = await bcrypt.hash(DEFAULT_PASSWORD, authConfig.bcryptSaltRounds);
 
   // 2. Criação dos Usuários de Teste (RBAC)
   console.log('👤 Criando usuários de teste...');

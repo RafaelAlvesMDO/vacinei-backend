@@ -47,6 +47,11 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** antes, o `403` saía mesmo com senha errada, revelando que o e-mail estava cadastrado.
 - **Requisito:** RF002 nota 1 (mensagem genérica contra enumeração de contas); LGPD/segurança.
 
+### D18 — Custo do bcrypt centralizado em 10
+- **Decisão:** o custo do bcrypt passou de 8 para 10 e fica numa única constante, `authConfig.bcryptSaltRounds` (`src/config/auth.ts`), usada no cadastro, no reset de senha, no seed e no hash fictício do login (D17). Senhas já salvas com custo 8 continuam válidas, porque o hash guarda o próprio custo; elas passam a custo 10 quando o usuário redefine a senha.
+- **Motivo:** 10 é o mínimo usual recomendado e deixa a força bruta offline ~4x mais cara. A constante única evita custos divergentes, o que também quebraria a igualdade de tempo do D17.
+- **Requisito:** RNF de segurança; LGPD.
+
 ## Privacidade (LGPD)
 
 ### D05 — Admin acessa só dados agregados de vacinação
