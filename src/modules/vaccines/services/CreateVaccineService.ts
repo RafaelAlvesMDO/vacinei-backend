@@ -1,16 +1,15 @@
 import { prisma } from '../../../config/prisma';
 import { AppError } from '../../../errors/AppError';
 import { CreateVaccineDTO } from '../dtos/vaccine.dto';
+import { findVaccineNameConflict } from './findVaccineNameConflict';
 
 export class CreateVaccineService {
   async execute(data: CreateVaccineDTO) {
     const { name, description, targetAudience, targetDisease, dosesCount, doses } = data;
 
-    const vaccineExists = await prisma.vaccine.findUnique({
-      where: { name },
-    });
+    const nameConflict = await findVaccineNameConflict(name);
 
-    if (vaccineExists) {
+    if (nameConflict) {
       throw new AppError('Já existe uma vacina cadastrada com este nome.', 409);
     }
 

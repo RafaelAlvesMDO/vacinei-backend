@@ -86,6 +86,11 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** registros de vacinação e campanhas apontam para a UBS; excluí-la apagaria ou quebraria o histórico.
 - **Requisito:** RF008 (nota 8).
 
+### D15 — Nome de vacina único sem diferenciar maiúsculas, minúsculas e acentos
+- **Decisão:** em `POST` e `PUT /vaccines`, o nome é comparado normalizado (sem acentos, minúsculo, espaços extras removidos). "Hepatite B" e "hepatite b" conflitam com 409. Na edição, a própria vacina é ignorada.
+- **Motivo:** evitar vacinas duplicadas no catálogo por diferença só de grafia.
+- **Requisito:** RF008.
+
 ## Pendências
 
 ### D09 — Dependentes ainda não implementados
