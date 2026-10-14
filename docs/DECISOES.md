@@ -57,6 +57,11 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** alterar e-mail/celular sem nova verificação permitiria sequestro de conta; revogar as outras sessões segue o mesmo princípio do reset (D04).
 - **Requisito:** RF003 (notas 2, 3, 5, 6 e 7); RS002.
 
+### D20 — Uma só rota para o usuário editar o próprio perfil
+- **Decisão:** o `PUT /users/me` foi removido e o `PUT /users/:id` passou a ser só de ADMIN (alterações administrativas). O próprio usuário edita o perfil apenas pelo `PATCH /auth/me` (D19).
+- **Motivo:** o `PUT /users/me` e o `PUT /users/:id` com o próprio id deixavam o usuário alterar celular e data de nascimento, contra o RF003. O frontend web não usava a rota; só o admin usa `PUT /users/:id` (`{ isActive }`).
+- **Requisito:** RF003 (notas 3, 5 e 6); RS002.
+
 ## Privacidade (LGPD)
 
 ### D05 — Admin acessa só dados agregados de vacinação

@@ -133,8 +133,8 @@ Senha de todos: **`Vacinei@2026`**
 - **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, updatedAt, professionalRegistry, dependents[] }`. O CPF (do usuário e dos dependentes) vem completo só para o próprio titular. Quando o ADMIN consulta outra pessoa, ele vem mascarado.
 - **Erros:** `401`, `403`, `404`.
 
-### PUT `/users/me` · PUT `/users/:id`
-- **Acesso:** Autenticado. O usuário só edita a si mesmo; ADMIN edita qualquer um.
+### PUT `/users/:id`
+- **Acesso:** ADMIN (alterações administrativas, RF003 nota 5). O usuário edita o próprio perfil por `PATCH /auth/me`; o `PUT /users/me` foi removido (D20).
 - **Body:** todos os campos são opcionais: `{ name?, phone?, birthDate?, avatarUrl?, isActive? }`. `name`, `phone` e `birthDate` seguem as mesmas regras do cadastro. Senha e CPF não são alterados por esta rota. Com `isActive: false`, as sessões do usuário são revogadas, como no `DELETE`.
 - **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, updatedAt }`. O CPF vem mascarado quando o ADMIN edita outra pessoa.
 - **Erros:** `400`, `401`, `403`, `404`.
