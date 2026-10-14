@@ -5,7 +5,7 @@ import { parseRegistryNumber } from '../../../utils/professionalCouncil';
 import { isValidCpf, normalizeCpf } from '../../../utils/cpf';
 
 // Regras do RF001 compartilhadas entre cadastro e edição
-const nameSchema = z
+export const nameSchema = z
   .string('Nome é obrigatório')
   .trim()
   .max(120, 'Nome deve ter no máximo 120 caracteres')

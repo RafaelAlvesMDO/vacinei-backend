@@ -52,6 +52,11 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** 10 é o mínimo usual recomendado e deixa a força bruta offline ~4x mais cara. A constante única evita custos divergentes, o que também quebraria a igualdade de tempo do D17.
 - **Requisito:** RNF de segurança; LGPD.
 
+### D19 — Perfil: só o nome é editável; troca de senha encerra as outras sessões
+- **Decisão:** `PATCH /auth/me` aceita apenas `name` (mesma validação do cadastro) e recusa qualquer outro campo; o id vem do token. E-mail e celular ficam bloqueados até existir a reverificação por código (trabalho futuro). CPF, data de nascimento, perfil, registro e categoria não são editáveis. `PATCH /auth/me/password` exige a senha atual (`401` se errada), aplica a regra de senha do RF001, recusa nova senha igual à atual e revoga os demais refresh tokens; a sessão atual só é mantida se o cliente enviar o próprio `refreshToken`, porque o access token não identifica a sessão.
+- **Motivo:** alterar e-mail/celular sem nova verificação permitiria sequestro de conta; revogar as outras sessões segue o mesmo princípio do reset (D04).
+- **Requisito:** RF003 (notas 2, 3, 5, 6 e 7); RS002.
+
 ## Privacidade (LGPD)
 
 ### D05 — Admin acessa só dados agregados de vacinação

@@ -81,6 +81,21 @@ Senha de todos: **`Vacinei@2026`**
   - `401`: não autenticado.
   - `404`: usuário não encontrado.
 
+### PATCH `/auth/me` (perfil, RF003)
+- **Acesso:** Autenticado. Edita só o próprio usuário (id vem do token, RS002).
+- **Body:** `{ name }`, com a mesma regra do cadastro. Qualquer outro campo é recusado com `400`: e-mail e celular exigem reverificação por código (futuro); CPF, data de nascimento, perfil e registro profissional não são editáveis (D19).
+- **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, updatedAt }`
+- **Erros:** `400`, `401`, `404`.
+
+### PATCH `/auth/me/password`
+- **Acesso:** Autenticado
+- **Body:** `{ currentPassword, newPassword, refreshToken? }`. `newPassword` segue a regra de senha. `refreshToken` (opcional) é o da sessão atual, para mantê-la ativa.
+- **200:** `message: "Senha alterada com sucesso."`. Revoga todos os outros refresh tokens do usuário (sem `refreshToken`, revoga todos).
+- **Erros:**
+  - `400`: validação, ou `A nova senha deve ser diferente da atual.`
+  - `401`: `Senha atual incorreta.` (ou token inválido).
+  - `404`: usuário não encontrado.
+
 ---
 
 ## Users (`/users`)
