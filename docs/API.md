@@ -317,12 +317,14 @@ Objeto `Ubs`: `{ id, cnes, name, zipCode, address (logradouro), number, neighbor
 
 ## Dashboard (`/dashboard`): painel do profissional (RF009)
 
-`/summary` e `/monthly` são dados agregados e aceitam **ADMIN** ou **profissional verificado**. `/recent-doses` identifica cidadãos com dados de saúde e exige **profissional verificado** (LGPD, princípio da necessidade). Os dados consideram as cadernetas de usuários ativos `CIDADAO` e `PROFISSIONAL_SAUDE` (D11); dependentes ainda não entram.
+`/summary` e `/monthly` são dados agregados e aceitam **ADMIN** ou **profissional verificado**. `/recent-doses` e `/overdue` identificam cidadãos com dados de saúde e exigem **profissional verificado** (LGPD, princípio da necessidade). Os dados consideram as cadernetas de usuários ativos `CIDADAO` e `PROFISSIONAL_SAUDE` (D11); dependentes ainda não entram.
 
 | Método | Rota | Query | Resposta 200 (`data`) |
 | :--- | :--- | :--- | :--- |
 | GET | `/dashboard/summary` | — | `{ totalCadernetas, totalVacinasRegistradas, totalDosesAtrasadas }` |
 | GET | `/dashboard/recent-doses` | `limit?` (1 a 50, padrão 10) | `[{ id, citizen: { id, name }, vaccine: { id, name }, dose: { id, doseNumber, doseName }, applicationDate, status }]` |
 | GET | `/dashboard/monthly` | — | `[{ month: "YYYY-MM", total }]`: últimos 12 meses, fuso America/Maceio |
+| GET | `/dashboard/overdue` | `limit?` (1 a 100, padrão 20), `search?` (nome) | `{ totalPessoas, totalDosesAtrasadas, items: [{ id, name, cpf, maxDaysOverdue, overdueVaccines: [{ vaccineId, vaccineName, nextDose: { id, doseName }, nextDoseDate, daysOverdue }] }] }` |
 
-- **Erros:** `400` (`limit` inválido), `401`, `403`.
+- **`/overdue` (busca ativa de faltosos, D21):** pessoas com ao menos uma vacina `ATRASADA`, pelo mesmo cálculo da caderneta. Ordenado por `maxDaysOverdue` (mais atrasado primeiro; empate por nome). `cpf` vem mascarado. `search` filtra por nome sem diferenciar maiúsculas e acentos. Os totais consideram todos os resultados do filtro (não só os `limit` retornados); sem `search`, `totalDosesAtrasadas` é igual ao do `/summary`.
+- **Erros:** `400` (`limit` ou `search` inválido), `401`, `403`.

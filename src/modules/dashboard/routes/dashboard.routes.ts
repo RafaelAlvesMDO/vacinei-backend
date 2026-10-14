@@ -16,3 +16,5 @@ dashboardRoutes.get('/monthly', ensureAdminOrVerifiedProfessional, dashboardCont
 
 // Identifica cidadãos com dados de saúde: só profissional verificado (RS005)
 dashboardRoutes.get('/recent-doses', ensureVerifiedProfessional, dashboardController.recentDoses);
+// Busca ativa de faltosos (D21)
+dashboardRoutes.get('/overdue', ensureVerifiedProfessional, dashboardController.overdue);

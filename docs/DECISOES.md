@@ -82,6 +82,11 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Observação:** no banco as colunas continuam aceitando nulo por causa de registros antigos. A obrigatoriedade é garantida pela validação (Zod) no cadastro.
 - **Requisito:** RF001, RF007, RF010; LGPD.
 
+### D21 — Lista de doses atrasadas só para profissional verificado (busca ativa)
+- **Decisão:** o `GET /dashboard/overdue` lista as pessoas (CIDADAO e PROFISSIONAL_SAUDE ativos) com vacina `ATRASADA`, com nome, CPF mascarado e as vacinas em atraso. Só o profissional verificado acessa; o `ADMIN` continua apenas com o total agregado do `/summary` (D05). O cálculo é o mesmo do card "Doses atrasadas", para que os números batam.
+- **Motivo:** finalidade de **busca ativa de faltosos**: o profissional precisa saber quem procurar para completar o esquema vacinal. São dados de saúde identificados, então, pelo princípio da necessidade, ficam restritos a quem presta o atendimento, com CPF mascarado (D14) e paginação limitada (máx. 100).
+- **Requisito:** RF009; RS005; LGPD.
+
 ## Caderneta
 
 ### D06 — Registro pelo cidadão → confirmação pelo profissional
