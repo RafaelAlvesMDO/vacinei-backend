@@ -42,6 +42,11 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** sem isso, o access token já emitido seguia válido por até 15 min. O custo é uma consulta por chave primária a cada requisição autenticada.
 - **Requisito:** RBAC; RNF de segurança.
 
+### D17 — Login confere a senha antes de informar conta desativada
+- **Decisão:** o `POST /auth/login` compara a senha antes de verificar `isActive`. E-mail inexistente ou senha errada sempre respondem `401 Credenciais inválidas.`; só com a senha correta uma conta desativada recebe `403`. Quando o e-mail não existe, a senha é comparada com um hash bcrypt fictício de mesmo custo, para o tempo de resposta não revelar se a conta existe.
+- **Motivo:** antes, o `403` saía mesmo com senha errada, revelando que o e-mail estava cadastrado.
+- **Requisito:** RF002 nota 1 (mensagem genérica contra enumeração de contas); LGPD/segurança.
+
 ## Privacidade (LGPD)
 
 ### D05 — Admin acessa só dados agregados de vacinação

@@ -47,8 +47,8 @@ Senha de todos: **`Vacinei@2026`**
   - `professionalRegistry`: `{ isVerified, status: "PENDENTE" | "VERIFICADO" | "RECUSADO" }` quando `role = PROFISSIONAL_SAUDE`. É `null` para os outros perfis.
 - **Erros:**
   - `400`: validação.
-  - `401`: `Credenciais inválidas.` (mensagem genérica).
-  - `403`: conta desativada.
+  - `401`: `Credenciais inválidas.` (mensagem genérica, igual para e-mail inexistente e senha errada, inclusive em conta desativada).
+  - `403`: conta desativada, **só quando a senha está correta** (D17).
 
 ### POST `/auth/refresh`
 - **Acesso:** Público

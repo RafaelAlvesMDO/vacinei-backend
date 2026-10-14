@@ -7,6 +7,9 @@ import { AppError } from '../../../errors/AppError';
 import { LoginDTO } from '../dtos/auth.dto';
 import { toRegistrySummary } from '../../professionals/services/professionalPresenter';
 
+// Mesmo custo (8) usado em CreateUserService e ResetPasswordService
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 8);
+
 export class AuthenticateUserService {
   async execute({ email, password }: LoginDTO) {
     const user = await prisma.user.findUnique({
@@ -16,19 +19,17 @@ export class AuthenticateUserService {
       },
     });
 
-    // RF002: Mensagem genérica para evitar enumeração de contas
-    if (!user) {
+    // RF002: Mensagem genérica para evitar enumeração de contas (D17).
+    // Sem usuário, compara com um hash fictício para o tempo de resposta ser o mesmo.
+    const passwordMatches = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
+
+    if (!user || !passwordMatches) {
       throw new AppError('Credenciais inválidas.', 401);
     }
 
+    // Só quem acertou a senha fica sabendo que a conta está desativada
     if (!user.isActive) {
       throw new AppError('Esta conta de usuário está desativada.', 403);
-    }
-
-    const passwordMatches = await bcrypt.compare(password, user.passwordHash);
-
-    if (!passwordMatches) {
-      throw new AppError('Credenciais inválidas.', 401);
     }
 
     // 1. Gera Access Token (curta duração - 15 min)
