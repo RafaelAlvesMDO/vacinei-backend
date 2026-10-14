@@ -3,6 +3,7 @@ import { ProfessionalCategory, UserRole } from '@prisma/client';
 import { passwordSchema } from '../../../utils/passwordSchema';
 import { parseRegistryNumber } from '../../../utils/professionalCouncil';
 import { isValidCpf, normalizeCpf } from '../../../utils/cpf';
+import { paginationQuerySchema } from '../../../utils/pagination';
 
 // Regras do RF001 compartilhadas entre cadastro e edição
 export const nameSchema = z
@@ -95,11 +96,15 @@ export const updateUserSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export const listUsersQuerySchema = z.object({
-  role: z.nativeEnum(UserRole).optional(),
-  search: z.string().optional(),
-  page: z.coerce.number().min(1).default(1),
-  limit: z.coerce.number().min(1).max(100).default(20),
+export const listUsersQuerySchema = paginationQuerySchema.extend({
+  role: z.nativeEnum(UserRole, 'role inválido').optional(),
+  isActive: z.enum(['true', 'false'], 'isActive deve ser true ou false').transform((v) => v === 'true').optional(),
+  search: z
+    .string('search deve ser um texto')
+    .trim()
+    .max(100, 'search deve ter no máximo 100 caracteres')
+    .optional()
+    .transform((value) => value || undefined),
 });
 
 export const searchCitizensQuerySchema = z.object({

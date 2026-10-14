@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { paginationQuerySchema } from '../../../utils/pagination';
 
 export const recentDosesQuerySchema = z.object({
   limit: z.coerce
@@ -11,13 +12,7 @@ export const recentDosesQuerySchema = z.object({
 
 export type RecentDosesQueryDTO = z.infer<typeof recentDosesQuerySchema>;
 
-export const overdueQuerySchema = z.object({
-  limit: z.coerce
-    .number('limit deve ser um número')
-    .int('limit deve ser um número inteiro')
-    .min(1, 'limit deve ser no mínimo 1')
-    .max(100, 'limit deve ser no máximo 100')
-    .default(20),
+export const overdueQuerySchema = paginationQuerySchema.extend({
   search: z
     .string('search deve ser um texto')
     .trim()

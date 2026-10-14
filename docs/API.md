@@ -26,6 +26,7 @@ Senha de todos: **`Vacinei@2026`**
 - **Profissional verificado:** perfil `PROFISSIONAL_SAUDE`, conta ativa e registro com `isVerified = true`. Se não atender, a rota responde `403`.
 - **Regra de senha (RF001):** mínimo de 8 caracteres, com ao menos 1 maiúscula, 1 minúscula, 1 número e 1 símbolo.
 - **Acesso:** `Público` = sem token; `Autenticado` = qualquer perfil logado.
+- **Paginação (D22):** `GET /users`, `GET /professionals` e `GET /dashboard/overdue` aceitam `?page=` (padrão 1) e `?limit=` (padrão 20, máximo 100) e respondem `data: { items, total, page, limit, totalPages, ... }`. `total` conta todos os resultados do filtro; `totalPages = ceil(total / limit)`. Página além da última volta `items: []`. Listas com abas de status trazem também `counts` (totais por status com os demais filtros aplicados, ignorando o filtro de status). `GET /ubs` e `GET /vaccines` não são paginados (catálogos pequenos).
 
 ---
 
@@ -124,8 +125,8 @@ Senha de todos: **`Vacinei@2026`**
 
 ### GET `/users`
 - **Acesso:** ADMIN
-- **Query:** `role?`, `search?` (nome, e-mail ou CPF, com ou sem máscara), `page?` (padrão 1), `limit?` (padrão 20, máximo 100)
-- **200:** `data: { total, page, limit, totalPages, users: [{ id, name, email, cpf: "***.123.456-**", phone, role, isActive, createdAt, professionalRegistry }] }`. CPF sempre mascarado.
+- **Query:** `role?`, `isActive?` (`true`/`false`), `search?` (nome, e-mail ou CPF, com ou sem máscara), `page?` (padrão 1), `limit?` (padrão 20, máximo 100). Filtros aplicados no banco.
+- **200:** `data: { items: [{ id, name, email, cpf: "***.123.456-**", phone, role, isActive, createdAt, professionalRegistry }], total, page, limit, totalPages, counts: { active, inactive } }`. Ordenado do mais recente. CPF sempre mascarado. `counts` respeita `role` e `search`, mas não `isActive`.
 - **Erros:** `400`, `401`, `403`.
 
 ### GET `/users/me` · GET `/users/:id`
@@ -165,9 +166,9 @@ Objeto `Professional`:
 ```
 
 ### GET `/professionals`
-- **Query:** `verified?`. Use `false` para listar pendentes e recusados, ou `true` para listar os verificados. Sem o filtro, retorna todos.
-- **200:** `data: Professional[]`, ordenado por data de cadastro.
-- **Erros:** `400` (`verified` diferente de `true`/`false`), `401`, `403`.
+- **Query:** `status?` (`PENDENTE`, `VERIFICADO` ou `RECUSADO`; sem ele, todos), `search?` (nome, sem diferenciar maiúsculas), `page?` (padrão 1), `limit?` (padrão 20, máximo 100). Filtros aplicados no banco. O antigo `verified` foi substituído por `status`.
+- **200:** `data: { items: Professional[], total, page, limit, totalPages, counts: { PENDENTE, VERIFICADO, RECUSADO } }`, ordenado por data de cadastro. `counts` respeita `search`, mas não `status`.
+- **Erros:** `400` (`status`, `page` ou `limit` inválidos), `401`, `403`.
 
 ### PATCH `/professionals/:id/verify`
 - **Body:** nenhum
@@ -324,7 +325,7 @@ Objeto `Ubs`: `{ id, cnes, name, zipCode, address (logradouro), number, neighbor
 | GET | `/dashboard/summary` | — | `{ totalCadernetas, totalVacinasRegistradas, totalDosesAtrasadas }` |
 | GET | `/dashboard/recent-doses` | `limit?` (1 a 50, padrão 10) | `[{ id, citizen: { id, name }, vaccine: { id, name }, dose: { id, doseNumber, doseName }, applicationDate, status }]` |
 | GET | `/dashboard/monthly` | — | `[{ month: "YYYY-MM", total }]`: últimos 12 meses, fuso America/Maceio |
-| GET | `/dashboard/overdue` | `limit?` (1 a 100, padrão 20), `search?` (nome) | `{ totalPessoas, totalDosesAtrasadas, items: [{ id, name, cpf, maxDaysOverdue, overdueVaccines: [{ vaccineId, vaccineName, nextDose: { id, doseName }, nextDoseDate, daysOverdue }] }] }` |
+| GET | `/dashboard/overdue` | `page?` (padrão 1), `limit?` (1 a 100, padrão 20), `search?` (nome) | `{ items, total, page, limit, totalPages, totalPessoas, totalDosesAtrasadas }`, com `items: [{ id, name, cpf, maxDaysOverdue, overdueVaccines: [{ vaccineId, vaccineName, nextDose: { id, doseName }, nextDoseDate, daysOverdue }] }]` |
 
-- **`/overdue` (busca ativa de faltosos, D21):** pessoas com ao menos uma vacina `ATRASADA`, pelo mesmo cálculo da caderneta. Ordenado por `maxDaysOverdue` (mais atrasado primeiro; empate por nome). `cpf` vem mascarado. `search` filtra por nome sem diferenciar maiúsculas e acentos. Os totais consideram todos os resultados do filtro (não só os `limit` retornados); sem `search`, `totalDosesAtrasadas` é igual ao do `/summary`.
-- **Erros:** `400` (`limit` ou `search` inválido), `401`, `403`.
+- **`/overdue` (busca ativa de faltosos, D21):** pessoas com ao menos uma vacina `ATRASADA`, pelo mesmo cálculo da caderneta. Ordenado por `maxDaysOverdue` (mais atrasado primeiro; empate por nome). `cpf` vem mascarado. `search` filtra por nome sem diferenciar maiúsculas e acentos. Paginado como as demais listas (D22). `totalPessoas` (igual a `total`) e `totalDosesAtrasadas` consideram todos os resultados do filtro, não só a página; sem `search`, `totalDosesAtrasadas` é igual ao do `/summary`.
+- **Erros:** `400` (`page`, `limit` ou `search` inválido), `401`, `403`.

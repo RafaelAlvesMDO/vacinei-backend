@@ -1,4 +1,5 @@
 import { maskCpf } from '../../../utils/cpf';
+import { paginateArray } from '../../../utils/pagination';
 import { OverdueQueryDTO } from '../dtos/dashboard.dto';
 import { loadCitizenVaccineStatuses } from './loadCitizenVaccineStatuses';
 
@@ -33,7 +34,7 @@ export class GetOverdueListService {
    * vacina ATRASADA, da mais atrasada para a menos atrasada. Usa o mesmo
    * cálculo do /summary, então o total sem `search` bate com o card.
    */
-  async execute({ limit, search }: OverdueQueryDTO, referenceDate = new Date()) {
+  async execute({ page, limit, search }: OverdueQueryDTO, referenceDate = new Date()) {
     const { statuses } = await loadCitizenVaccineStatuses(referenceDate);
     const today = utcDay(referenceDate);
     const term = search ? normalizeName(search) : null;
@@ -71,10 +72,11 @@ export class GetOverdueListService {
       person.overdueVaccines.sort((a, b) => b.daysOverdue - a.daysOverdue);
     }
 
+    // A lista é calculada em memória (status vem do motor de regras), então pagina depois de ordenar
     return {
+      ...paginateArray(sorted, { page, limit }),
       totalPessoas: sorted.length,
       totalDosesAtrasadas: sorted.reduce((sum, person) => sum + person.overdueVaccines.length, 0),
-      items: sorted.slice(0, limit),
     };
   }
 }

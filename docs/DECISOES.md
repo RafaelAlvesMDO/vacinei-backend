@@ -10,6 +10,11 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** fonte única de verdade, consistência entre clientes e segurança (o cliente não é confiável).
 - **Requisito:** arquitetura geral; RNF de segurança.
 
+### D22 — Paginação no servidor com formato único; catálogos sem paginação
+- **Decisão:** listas que crescem com o uso (`GET /users`, `GET /professionals`, `GET /dashboard/overdue`) são paginadas no servidor com `?page=` (padrão 1) e `?limit=` (padrão 20, máximo 100) e respondem `{ items, total, page, limit, totalPages }`. Busca e filtros rodam no banco antes da paginação (no `/overdue`, o status é calculado em memória e a página é cortada depois de ordenar). Listas com abas de status devolvem `counts` com o total por status, sem aplicar o filtro de status. `GET /ubs` e `GET /vaccines` seguem sem paginação.
+- **Motivo:** evitar baixar a base inteira no painel, manter um contrato só para o front e mostrar os contadores das abas sem buscar tudo. UBSs e vacinas são catálogos limitados (dezenas de itens) usados inteiros em selects e mapas.
+- **Requisito:** RNF de desempenho; RF003, RS001, RF009.
+
 ## Autenticação e perfis
 
 ### D02 — Cadastro público só para CIDADAO e PROFISSIONAL_SAUDE
