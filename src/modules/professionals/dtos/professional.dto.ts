@@ -1,7 +1,14 @@
 import { z } from 'zod';
+import { paginationQuerySchema } from '../../../utils/pagination';
 
-export const listProfessionalsQuerySchema = z.object({
-  verified: z.enum(['true', 'false'], 'verified deve ser true ou false').transform((v) => v === 'true').optional(),
+export const listProfessionalsQuerySchema = paginationQuerySchema.extend({
+  status: z.enum(['PENDENTE', 'VERIFICADO', 'RECUSADO'], 'status deve ser PENDENTE, VERIFICADO ou RECUSADO').optional(),
+  search: z
+    .string('search deve ser um texto')
+    .trim()
+    .max(100, 'search deve ter no máximo 100 caracteres')
+    .optional()
+    .transform((value) => value || undefined),
 });
 
 export const professionalIdParamsSchema = z.object({

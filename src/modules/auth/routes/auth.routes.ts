@@ -10,3 +10,5 @@ authRoutes.post('/refresh', authController.refresh);
 authRoutes.post('/forgot-password', authController.forgotPassword);
 authRoutes.post('/reset-password', authController.resetPassword);
 authRoutes.get('/me', ensureAuthenticated, authController.me);
+authRoutes.patch('/me', ensureAuthenticated, authController.updateProfile);
+authRoutes.patch('/me/password', ensureAuthenticated, authController.changePassword);

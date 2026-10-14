@@ -4,7 +4,11 @@ import {
   refreshTokenSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  updateProfileSchema,
+  changePasswordSchema,
 } from '../dtos/auth.dto';
+import { UpdateProfileService } from '../services/UpdateProfileService';
+import { ChangePasswordService } from '../services/ChangePasswordService';
 import { AuthenticateUserService } from '../services/AuthenticateUserService';
 import { RefreshTokenService } from '../services/RefreshTokenService';
 import { ForgotPasswordService } from '../services/ForgotPasswordService';
@@ -60,6 +64,38 @@ export class AuthController {
     return res.status(200).json({
       status: 'success',
       message: 'Senha redefinida com sucesso.',
+    });
+  }
+
+  async updateProfile(req: Request, res: Response): Promise<Response> {
+    if (!req.user?.id) {
+      throw new AppError('Usuário não autenticado.', 401);
+    }
+
+    const validatedData = updateProfileSchema.parse(req.body);
+
+    const updateProfileService = new UpdateProfileService();
+    const user = await updateProfileService.execute(req.user.id, validatedData);
+
+    return res.status(200).json({
+      status: 'success',
+      data: user,
+    });
+  }
+
+  async changePassword(req: Request, res: Response): Promise<Response> {
+    if (!req.user?.id) {
+      throw new AppError('Usuário não autenticado.', 401);
+    }
+
+    const validatedData = changePasswordSchema.parse(req.body);
+
+    const changePasswordService = new ChangePasswordService();
+    await changePasswordService.execute(req.user.id, validatedData);
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Senha alterada com sucesso.',
     });
   }
 

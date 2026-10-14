@@ -57,11 +57,8 @@ export class UserController {
 
   async update(req: Request, res: Response): Promise<Response> {
     const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const targetUserId = rawId === 'me' || !rawId ? req.user.id : rawId;
-
-    if (req.user.role !== UserRole.ADMIN && req.user.id !== targetUserId) {
-      throw new AppError('Acesso não autorizado para alterar dados deste usuário.', 403);
-    }
+    // Rota só de ADMIN (checkRole): alterações administrativas, RF003 nota 5
+    const targetUserId = rawId;
 
     const validatedData = updateUserSchema.parse(req.body);
 

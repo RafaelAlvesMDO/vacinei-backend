@@ -26,6 +26,7 @@ Senha de todos: **`Vacinei@2026`**
 - **Profissional verificado:** perfil `PROFISSIONAL_SAUDE`, conta ativa e registro com `isVerified = true`. Se não atender, a rota responde `403`.
 - **Regra de senha (RF001):** mínimo de 8 caracteres, com ao menos 1 maiúscula, 1 minúscula, 1 número e 1 símbolo.
 - **Acesso:** `Público` = sem token; `Autenticado` = qualquer perfil logado.
+- **Paginação (D22):** `GET /users`, `GET /professionals` e `GET /dashboard/overdue` aceitam `?page=` (padrão 1) e `?limit=` (padrão 20, máximo 100) e respondem `data: { items, total, page, limit, totalPages, ... }`. `total` conta todos os resultados do filtro; `totalPages = ceil(total / limit)`. Página além da última volta `items: []`. Listas com abas de status trazem também `counts` (totais por status com os demais filtros aplicados, ignorando o filtro de status). `GET /ubs` e `GET /vaccines` não são paginados (catálogos pequenos).
 
 ---
 
@@ -81,6 +82,21 @@ Senha de todos: **`Vacinei@2026`**
   - `401`: não autenticado.
   - `404`: usuário não encontrado.
 
+### PATCH `/auth/me` (perfil, RF003)
+- **Acesso:** Autenticado. Edita só o próprio usuário (id vem do token, RS002).
+- **Body:** `{ name }`, com a mesma regra do cadastro. Qualquer outro campo é recusado com `400`: e-mail e celular exigem reverificação por código (futuro); CPF, data de nascimento, perfil e registro profissional não são editáveis (D19).
+- **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, updatedAt }`
+- **Erros:** `400`, `401`, `404`.
+
+### PATCH `/auth/me/password`
+- **Acesso:** Autenticado
+- **Body:** `{ currentPassword, newPassword, refreshToken? }`. `newPassword` segue a regra de senha. `refreshToken` (opcional) é o da sessão atual, para mantê-la ativa.
+- **200:** `message: "Senha alterada com sucesso."`. Revoga todos os outros refresh tokens do usuário (sem `refreshToken`, revoga todos).
+- **Erros:**
+  - `400`: validação, ou `A nova senha deve ser diferente da atual.`
+  - `401`: `Senha atual incorreta.` (ou token inválido).
+  - `404`: usuário não encontrado.
+
 ---
 
 ## Users (`/users`)
@@ -109,8 +125,8 @@ Senha de todos: **`Vacinei@2026`**
 
 ### GET `/users`
 - **Acesso:** ADMIN
-- **Query:** `role?`, `search?` (nome, e-mail ou CPF, com ou sem máscara), `page?` (padrão 1), `limit?` (padrão 20, máximo 100)
-- **200:** `data: { total, page, limit, totalPages, users: [{ id, name, email, cpf: "***.123.456-**", phone, role, isActive, createdAt, professionalRegistry }] }`. CPF sempre mascarado.
+- **Query:** `role?`, `isActive?` (`true`/`false`), `search?` (nome, e-mail ou CPF, com ou sem máscara), `page?` (padrão 1), `limit?` (padrão 20, máximo 100). Filtros aplicados no banco.
+- **200:** `data: { items: [{ id, name, email, cpf: "***.123.456-**", phone, role, isActive, createdAt, professionalRegistry }], total, page, limit, totalPages, counts: { active, inactive } }`. Ordenado do mais recente. CPF sempre mascarado. `counts` respeita `role` e `search`, mas não `isActive`.
 - **Erros:** `400`, `401`, `403`.
 
 ### GET `/users/me` · GET `/users/:id`
@@ -118,8 +134,8 @@ Senha de todos: **`Vacinei@2026`**
 - **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, updatedAt, professionalRegistry, dependents[] }`. O CPF (do usuário e dos dependentes) vem completo só para o próprio titular. Quando o ADMIN consulta outra pessoa, ele vem mascarado.
 - **Erros:** `401`, `403`, `404`.
 
-### PUT `/users/me` · PUT `/users/:id`
-- **Acesso:** Autenticado. O usuário só edita a si mesmo; ADMIN edita qualquer um.
+### PUT `/users/:id`
+- **Acesso:** ADMIN (alterações administrativas, RF003 nota 5). O usuário edita o próprio perfil por `PATCH /auth/me`; o `PUT /users/me` foi removido (D20).
 - **Body:** todos os campos são opcionais: `{ name?, phone?, birthDate?, avatarUrl?, isActive? }`. `name`, `phone` e `birthDate` seguem as mesmas regras do cadastro. Senha e CPF não são alterados por esta rota. Com `isActive: false`, as sessões do usuário são revogadas, como no `DELETE`.
 - **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, updatedAt }`. O CPF vem mascarado quando o ADMIN edita outra pessoa.
 - **Erros:** `400`, `401`, `403`, `404`.
@@ -150,9 +166,9 @@ Objeto `Professional`:
 ```
 
 ### GET `/professionals`
-- **Query:** `verified?`. Use `false` para listar pendentes e recusados, ou `true` para listar os verificados. Sem o filtro, retorna todos.
-- **200:** `data: Professional[]`, ordenado por data de cadastro.
-- **Erros:** `400` (`verified` diferente de `true`/`false`), `401`, `403`.
+- **Query:** `status?` (`PENDENTE`, `VERIFICADO` ou `RECUSADO`; sem ele, todos), `search?` (nome, sem diferenciar maiúsculas), `page?` (padrão 1), `limit?` (padrão 20, máximo 100). Filtros aplicados no banco. O antigo `verified` foi substituído por `status`.
+- **200:** `data: { items: Professional[], total, page, limit, totalPages, counts: { PENDENTE, VERIFICADO, RECUSADO } }`, ordenado por data de cadastro. `counts` respeita `search`, mas não `status`.
+- **Erros:** `400` (`status`, `page` ou `limit` inválidos), `401`, `403`.
 
 ### PATCH `/professionals/:id/verify`
 - **Body:** nenhum
@@ -302,12 +318,14 @@ Objeto `Ubs`: `{ id, cnes, name, zipCode, address (logradouro), number, neighbor
 
 ## Dashboard (`/dashboard`): painel do profissional (RF009)
 
-`/summary` e `/monthly` são dados agregados e aceitam **ADMIN** ou **profissional verificado**. `/recent-doses` identifica cidadãos com dados de saúde e exige **profissional verificado** (LGPD, princípio da necessidade). Os dados consideram as cadernetas de usuários ativos `CIDADAO` e `PROFISSIONAL_SAUDE` (D11); dependentes ainda não entram.
+`/summary` e `/monthly` são dados agregados e aceitam **ADMIN** ou **profissional verificado**. `/recent-doses` e `/overdue` identificam cidadãos com dados de saúde e exigem **profissional verificado** (LGPD, princípio da necessidade). Os dados consideram as cadernetas de usuários ativos `CIDADAO` e `PROFISSIONAL_SAUDE` (D11); dependentes ainda não entram.
 
 | Método | Rota | Query | Resposta 200 (`data`) |
 | :--- | :--- | :--- | :--- |
 | GET | `/dashboard/summary` | — | `{ totalCadernetas, totalVacinasRegistradas, totalDosesAtrasadas }` |
 | GET | `/dashboard/recent-doses` | `limit?` (1 a 50, padrão 10) | `[{ id, citizen: { id, name }, vaccine: { id, name }, dose: { id, doseNumber, doseName }, applicationDate, status }]` |
 | GET | `/dashboard/monthly` | — | `[{ month: "YYYY-MM", total }]`: últimos 12 meses, fuso America/Maceio |
+| GET | `/dashboard/overdue` | `page?` (padrão 1), `limit?` (1 a 100, padrão 20), `search?` (nome) | `{ items, total, page, limit, totalPages, totalPessoas, totalDosesAtrasadas }`, com `items: [{ id, name, cpf, maxDaysOverdue, overdueVaccines: [{ vaccineId, vaccineName, nextDose: { id, doseName }, nextDoseDate, daysOverdue }] }]` |
 
-- **Erros:** `400` (`limit` inválido), `401`, `403`.
+- **`/overdue` (busca ativa de faltosos, D21):** pessoas com ao menos uma vacina `ATRASADA`, pelo mesmo cálculo da caderneta. Ordenado por `maxDaysOverdue` (mais atrasado primeiro; empate por nome). `cpf` vem mascarado. `search` filtra por nome sem diferenciar maiúsculas e acentos. Paginado como as demais listas (D22). `totalPessoas` (igual a `total`) e `totalDosesAtrasadas` consideram todos os resultados do filtro, não só a página; sem `search`, `totalDosesAtrasadas` é igual ao do `/summary`.
+- **Erros:** `400` (`page`, `limit` ou `search` inválido), `401`, `403`.

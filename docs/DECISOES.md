@@ -10,6 +10,11 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** fonte única de verdade, consistência entre clientes e segurança (o cliente não é confiável).
 - **Requisito:** arquitetura geral; RNF de segurança.
 
+### D22 — Paginação no servidor com formato único; catálogos sem paginação
+- **Decisão:** listas que crescem com o uso (`GET /users`, `GET /professionals`, `GET /dashboard/overdue`) são paginadas no servidor com `?page=` (padrão 1) e `?limit=` (padrão 20, máximo 100) e respondem `{ items, total, page, limit, totalPages }`. Busca e filtros rodam no banco antes da paginação (no `/overdue`, o status é calculado em memória e a página é cortada depois de ordenar). Listas com abas de status devolvem `counts` com o total por status, sem aplicar o filtro de status. `GET /ubs` e `GET /vaccines` seguem sem paginação.
+- **Motivo:** evitar baixar a base inteira no painel, manter um contrato só para o front e mostrar os contadores das abas sem buscar tudo. UBSs e vacinas são catálogos limitados (dezenas de itens) usados inteiros em selects e mapas.
+- **Requisito:** RNF de desempenho; RF003, RS001, RF009.
+
 ## Autenticação e perfis
 
 ### D02 — Cadastro público só para CIDADAO e PROFISSIONAL_SAUDE
@@ -52,6 +57,16 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** 10 é o mínimo usual recomendado e deixa a força bruta offline ~4x mais cara. A constante única evita custos divergentes, o que também quebraria a igualdade de tempo do D17.
 - **Requisito:** RNF de segurança; LGPD.
 
+### D19 — Perfil: só o nome é editável; troca de senha encerra as outras sessões
+- **Decisão:** `PATCH /auth/me` aceita apenas `name` (mesma validação do cadastro) e recusa qualquer outro campo; o id vem do token. E-mail e celular ficam bloqueados até existir a reverificação por código (trabalho futuro). CPF, data de nascimento, perfil, registro e categoria não são editáveis. `PATCH /auth/me/password` exige a senha atual (`401` se errada), aplica a regra de senha do RF001, recusa nova senha igual à atual e revoga os demais refresh tokens; a sessão atual só é mantida se o cliente enviar o próprio `refreshToken`, porque o access token não identifica a sessão.
+- **Motivo:** alterar e-mail/celular sem nova verificação permitiria sequestro de conta; revogar as outras sessões segue o mesmo princípio do reset (D04).
+- **Requisito:** RF003 (notas 2, 3, 5, 6 e 7); RS002.
+
+### D20 — Uma só rota para o usuário editar o próprio perfil
+- **Decisão:** o `PUT /users/me` foi removido e o `PUT /users/:id` passou a ser só de ADMIN (alterações administrativas). O próprio usuário edita o perfil apenas pelo `PATCH /auth/me` (D19).
+- **Motivo:** o `PUT /users/me` e o `PUT /users/:id` com o próprio id deixavam o usuário alterar celular e data de nascimento, contra o RF003. O frontend web não usava a rota; só o admin usa `PUT /users/:id` (`{ isActive }`).
+- **Requisito:** RF003 (notas 3, 5 e 6); RS002.
+
 ## Privacidade (LGPD)
 
 ### D05 — Admin acessa só dados agregados de vacinação
@@ -71,6 +86,11 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
   - LGPD: princípios da finalidade, necessidade e minimização. Quem já tem o CPF em mãos confirma a identidade, mas a API não divulga o número a terceiros.
 - **Observação:** no banco as colunas continuam aceitando nulo por causa de registros antigos. A obrigatoriedade é garantida pela validação (Zod) no cadastro.
 - **Requisito:** RF001, RF007, RF010; LGPD.
+
+### D21 — Lista de doses atrasadas só para profissional verificado (busca ativa)
+- **Decisão:** o `GET /dashboard/overdue` lista as pessoas (CIDADAO e PROFISSIONAL_SAUDE ativos) com vacina `ATRASADA`, com nome, CPF mascarado e as vacinas em atraso. Só o profissional verificado acessa; o `ADMIN` continua apenas com o total agregado do `/summary` (D05). O cálculo é o mesmo do card "Doses atrasadas", para que os números batam.
+- **Motivo:** finalidade de **busca ativa de faltosos**: o profissional precisa saber quem procurar para completar o esquema vacinal. São dados de saúde identificados, então, pelo princípio da necessidade, ficam restritos a quem presta o atendimento, com CPF mascarado (D14) e paginação limitada (máx. 100).
+- **Requisito:** RF009; RS005; LGPD.
 
 ## Caderneta
 

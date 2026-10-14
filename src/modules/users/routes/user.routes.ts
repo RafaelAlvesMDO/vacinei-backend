@@ -12,12 +12,12 @@ const userController = new UserController();
 userRoutes.post('/', optionalAuthenticated, userController.create);
 
 // Rotas autenticadas do usuário logado
+// A edição do próprio perfil fica só no PATCH /auth/me (D20)
 userRoutes.get('/me', ensureAuthenticated, userController.show);
-userRoutes.put('/me', ensureAuthenticated, userController.update);
 userRoutes.delete('/me', ensureAuthenticated, userController.delete);
 
 // Rotas administrativas / gerenciamento
 userRoutes.get('/', ensureAuthenticated, checkRole(UserRole.ADMIN), userController.index);
 userRoutes.get('/:id', ensureAuthenticated, userController.show);
-userRoutes.put('/:id', ensureAuthenticated, userController.update);
+userRoutes.put('/:id', ensureAuthenticated, checkRole(UserRole.ADMIN), userController.update);
 userRoutes.delete('/:id', ensureAuthenticated, userController.delete);

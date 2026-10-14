@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { paginationQuerySchema } from '../../../utils/pagination';
 
 export const recentDosesQuerySchema = z.object({
   limit: z.coerce
@@ -10,3 +11,14 @@ export const recentDosesQuerySchema = z.object({
 });
 
 export type RecentDosesQueryDTO = z.infer<typeof recentDosesQuerySchema>;
+
+export const overdueQuerySchema = paginationQuerySchema.extend({
+  search: z
+    .string('search deve ser um texto')
+    .trim()
+    .max(100, 'search deve ter no máximo 100 caracteres')
+    .optional()
+    .transform((value) => value || undefined),
+});
+
+export type OverdueQueryDTO = z.infer<typeof overdueQuerySchema>;
