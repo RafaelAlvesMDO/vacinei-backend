@@ -6,6 +6,8 @@ export const authConfig = {
   refreshToken: {
     expiresInDays: Number(process.env.REFRESH_TOKEN_EXPIRES_DAYS) || 30,
   },
+  // Custo do bcrypt para senhas (D18). Hashes antigos guardam o próprio custo e seguem válidos.
+  bcryptSaltRounds: 10,
   passwordReset: {
     expiresInMinutes: 10,
     maxAttempts: 3,

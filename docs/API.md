@@ -21,7 +21,7 @@ Senha de todos: **`Vacinei@2026`**
 - **Erro:** `{ "status": "error", "message": "..." }`.
 - **Erro de validação (400):** inclui `issues` com os erros por campo (formato `ZodError.format()`).
 - **Erros comuns a toda rota autenticada:**
-  - `401`: token ausente, inválido ou expirado.
+  - `401`: token ausente, inválido ou expirado, ou usuário desativado (o bloqueio vale na hora, mesmo com token ainda no prazo).
   - `403`: o perfil não tem permissão.
 - **Profissional verificado:** perfil `PROFISSIONAL_SAUDE`, conta ativa e registro com `isVerified = true`. Se não atender, a rota responde `403`.
 - **Regra de senha (RF001):** mínimo de 8 caracteres, com ao menos 1 maiúscula, 1 minúscula, 1 número e 1 símbolo.
@@ -47,8 +47,8 @@ Senha de todos: **`Vacinei@2026`**
   - `professionalRegistry`: `{ isVerified, status: "PENDENTE" | "VERIFICADO" | "RECUSADO" }` quando `role = PROFISSIONAL_SAUDE`. É `null` para os outros perfis.
 - **Erros:**
   - `400`: validação.
-  - `401`: `Credenciais inválidas.` (mensagem genérica).
-  - `403`: conta desativada.
+  - `401`: `Credenciais inválidas.` (mensagem genérica, igual para e-mail inexistente e senha errada, inclusive em conta desativada).
+  - `403`: conta desativada, **só quando a senha está correta** (D17).
 
 ### POST `/auth/refresh`
 - **Acesso:** Público
@@ -120,7 +120,7 @@ Senha de todos: **`Vacinei@2026`**
 
 ### PUT `/users/me` · PUT `/users/:id`
 - **Acesso:** Autenticado. O usuário só edita a si mesmo; ADMIN edita qualquer um.
-- **Body:** todos os campos são opcionais: `{ name?, phone?, birthDate?, avatarUrl?, isActive? }`. `name`, `phone` e `birthDate` seguem as mesmas regras do cadastro. Senha e CPF não são alterados por esta rota.
+- **Body:** todos os campos são opcionais: `{ name?, phone?, birthDate?, avatarUrl?, isActive? }`. `name`, `phone` e `birthDate` seguem as mesmas regras do cadastro. Senha e CPF não são alterados por esta rota. Com `isActive: false`, as sessões do usuário são revogadas, como no `DELETE`.
 - **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, updatedAt }`. O CPF vem mascarado quando o ADMIN edita outra pessoa.
 - **Erros:** `400`, `401`, `403`, `404`.
 
@@ -281,7 +281,8 @@ Objeto `Ubs`: `{ id, cnes, name, zipCode, address (logradouro), number, neighbor
 - **Body (RF008):** `{ name, zipCode, address, number, neighborhood, city, state (UF), latitude, longitude, openingHours, phone?, cnes? }`
   - `zipCode`: 8 dígitos, com ou sem hífen. É salvo como `00000-000`.
   - `address`: logradouro. `number`: número do endereço, ou `"s/n"`.
-  - `openingHours`: texto livre (ex: `"07:00 às 17:00"`).
+  - `openingHours`: padrão do Gerenciador Web. Faixas separadas por `" · "`, cada uma no formato `"<dias>: HH:MM às HH:MM"`. Dias: `Seg`, `Ter`, `Qua`, `Qui`, `Sex`, `Sáb`, `Dom`. Dias consecutivos são agrupados (`"Seg a Sex"`) e dias soltos são separados por vírgula (`"Seg, Qua"`). Fora do padrão retorna `400`.
+    - Ex: `"Seg a Sex: 07:00 às 17:00 · Sáb: 07:00 às 14:00"`
 - **201:** `data: Ubs` (nasce ativa)
 - **Erros:** `400`, `401`, `403`, `409` (CNES duplicado).
 

@@ -65,7 +65,7 @@ export class ResetPasswordService {
       throw new AppError(INVALID_CODE_MESSAGE, 400);
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, 8);
+    const passwordHash = await bcrypt.hash(newPassword, authConfig.bcryptSaltRounds);
 
     await prisma.$transaction([
       prisma.user.update({

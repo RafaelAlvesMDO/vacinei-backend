@@ -13,7 +13,7 @@ export class UpdateUserService {
       throw new AppError('Usuário não encontrado.', 404);
     }
 
-    const updatedUser = await prisma.user.update({
+    const updateUser = prisma.user.update({
       where: { id: userId },
       data: {
         ...(data.name ? { name: data.name } : {}),
@@ -35,6 +35,18 @@ export class UpdateUserService {
         updatedAt: true,
       },
     });
+
+    // Desativação revoga todas as sessões ativas, como no DELETE
+    const [updatedUser] =
+      data.isActive === false
+        ? await prisma.$transaction([
+            updateUser,
+            prisma.refreshToken.updateMany({
+              where: { userId, revokedAt: null },
+              data: { revokedAt: new Date() },
+            }),
+          ])
+        : [await updateUser];
 
     // LGPD: CPF completo só para o próprio titular
     if (requesterId === userId) return updatedUser;

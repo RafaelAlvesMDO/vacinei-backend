@@ -37,6 +37,21 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** vazamento do banco não expõe códigos válidos; evita enumeração de contas e força bruta.
 - **Requisito:** recuperação de senha; LGPD/segurança.
 
+### D16 — Desativação de usuário bloqueia o acesso na hora
+- **Decisão:** desativar um usuário (`DELETE /users/:id` ou `PUT /users/:id` com `isActive: false`) revoga todos os refresh tokens dele. O `ensureAuthenticated` consulta o banco a cada requisição e responde `401` se o usuário não existe ou está inativo, mesmo com access token válido.
+- **Motivo:** sem isso, o access token já emitido seguia válido por até 15 min. O custo é uma consulta por chave primária a cada requisição autenticada.
+- **Requisito:** RBAC; RNF de segurança.
+
+### D17 — Login confere a senha antes de informar conta desativada
+- **Decisão:** o `POST /auth/login` compara a senha antes de verificar `isActive`. E-mail inexistente ou senha errada sempre respondem `401 Credenciais inválidas.`; só com a senha correta uma conta desativada recebe `403`. Quando o e-mail não existe, a senha é comparada com um hash bcrypt fictício de mesmo custo, para o tempo de resposta não revelar se a conta existe.
+- **Motivo:** antes, o `403` saía mesmo com senha errada, revelando que o e-mail estava cadastrado.
+- **Requisito:** RF002 nota 1 (mensagem genérica contra enumeração de contas); LGPD/segurança.
+
+### D18 — Custo do bcrypt centralizado em 10
+- **Decisão:** o custo do bcrypt passou de 8 para 10 e fica numa única constante, `authConfig.bcryptSaltRounds` (`src/config/auth.ts`), usada no cadastro, no reset de senha, no seed e no hash fictício do login (D17). Senhas já salvas com custo 8 continuam válidas, porque o hash guarda o próprio custo; elas passam a custo 10 quando o usuário redefine a senha.
+- **Motivo:** 10 é o mínimo usual recomendado e deixa a força bruta offline ~4x mais cara. A constante única evita custos divergentes, o que também quebraria a igualdade de tempo do D17.
+- **Requisito:** RNF de segurança; LGPD.
+
 ## Privacidade (LGPD)
 
 ### D05 — Admin acessa só dados agregados de vacinação
@@ -85,6 +100,11 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Decisão:** uma UBS que deixa de existir é desativada (`isActive = false`) pelo `ADMIN` via `PATCH /ubs/:id/status`; não há exclusão. O `GET /ubs` público lista só as ativas; o `ADMIN` vê todas com `?includeInactive=true`.
 - **Motivo:** registros de vacinação e campanhas apontam para a UBS; excluí-la apagaria ou quebraria o histórico.
 - **Requisito:** RF008 (nota 8).
+
+### D15 — Nome de vacina único sem diferenciar maiúsculas, minúsculas e acentos
+- **Decisão:** em `POST` e `PUT /vaccines`, o nome é comparado normalizado (sem acentos, minúsculo, espaços extras removidos). "Hepatite B" e "hepatite b" conflitam com 409. Na edição, a própria vacina é ignorada.
+- **Motivo:** evitar vacinas duplicadas no catálogo por diferença só de grafia.
+- **Requisito:** RF008.
 
 ## Pendências
 

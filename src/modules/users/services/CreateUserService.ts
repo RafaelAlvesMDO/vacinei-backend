@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { UserRole } from '@prisma/client';
 import { prisma } from '../../../config/prisma';
+import { authConfig } from '../../../config/auth';
 import { AppError } from '../../../errors/AppError';
 import { CreateUserDTO } from '../dtos/user.dto';
 import { COUNCIL_BY_CATEGORY, parseRegistryNumber } from '../../../utils/professionalCouncil';
@@ -78,7 +79,7 @@ export class CreateUserService {
     }
 
     // 4. Hash da senha
-    const passwordHash = await bcrypt.hash(password, 8);
+    const passwordHash = await bcrypt.hash(password, authConfig.bcryptSaltRounds);
 
     // 5. Criação atômica no banco de dados
     const user = await prisma.user.create({

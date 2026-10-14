@@ -1,5 +1,6 @@
 import { PrismaClient, UserRole, TargetAudience, RecordOrigin, VaccineStatus, ProfessionalCategory } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { authConfig } from '../src/config/auth';
 
 const prisma = new PrismaClient();
 
@@ -160,7 +161,7 @@ async function main() {
   await prisma.ubs.deleteMany();
   await prisma.user.deleteMany();
 
-  const defaultPasswordHash = await bcrypt.hash(DEFAULT_PASSWORD, 8);
+  const defaultPasswordHash = await bcrypt.hash(DEFAULT_PASSWORD, authConfig.bcryptSaltRounds);
 
   // 2. Criação dos Usuários de Teste (RBAC)
   console.log('👤 Criando usuários de teste...');
@@ -275,7 +276,7 @@ async function main() {
       latitude: -9.6631,
       longitude: -35.7314,
       phone: '(82) 3312-5460',
-      openingHours: '07:00 às 19:00',
+      openingHours: 'Seg a Sex: 07:00 às 19:00',
     },
     {
       cnes: '2011603',
@@ -289,7 +290,7 @@ async function main() {
       latitude: -9.6692,
       longitude: -35.7145,
       phone: '(82) 3312-5498',
-      openingHours: '07:00 às 21:00',
+      openingHours: 'Seg a Sex: 07:00 às 21:00',
     },
     {
       cnes: '2009706',
@@ -303,7 +304,7 @@ async function main() {
       latitude: -9.6521,
       longitude: -35.7230,
       phone: '(82) 3312-5497',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
 
     // --- 2º Distrito Sanitário (Região Lagunar / Sul) ---
@@ -319,7 +320,7 @@ async function main() {
       latitude: -9.6698,
       longitude: -35.7482,
       phone: '(82) 3315-5002',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2009838',
@@ -333,7 +334,7 @@ async function main() {
       latitude: -9.6912,
       longitude: -35.7725,
       phone: '(82) 3312-5508',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2009870',
@@ -347,7 +348,7 @@ async function main() {
       latitude: -9.6625,
       longitude: -35.7510,
       phone: '(82) 3312-5501',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2009811',
@@ -361,7 +362,7 @@ async function main() {
       latitude: -9.6734,
       longitude: -35.7523,
       phone: '(82) 3312-5502',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2005473',
@@ -375,7 +376,7 @@ async function main() {
       latitude: -9.6782,
       longitude: -35.7610,
       phone: '(82) 3312-5505',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
 
     // --- 3º Distrito Sanitário (Farol / Eixo Fernandes Lima) ---
@@ -391,7 +392,7 @@ async function main() {
       latitude: -9.6385,
       longitude: -35.7360,
       phone: '(82) 3315-5003',
-      openingHours: '07:00 às 18:00',
+      openingHours: 'Seg a Sex: 07:00 às 18:00',
     },
     {
       cnes: '2003325',
@@ -405,7 +406,7 @@ async function main() {
       latitude: -9.6450,
       longitude: -35.7395,
       phone: '(82) 3312-5515',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '9306471',
@@ -419,7 +420,7 @@ async function main() {
       latitude: -9.6205,
       longitude: -35.7330,
       phone: '(82) 3312-5580',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2005794',
@@ -433,7 +434,7 @@ async function main() {
       latitude: -9.6152,
       longitude: -35.7480,
       phone: '(82) 3312-5585',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2005840',
@@ -447,7 +448,7 @@ async function main() {
       latitude: -9.6220,
       longitude: -35.7510,
       phone: '(82) 3312-5520',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
 
     // --- 4º Distrito Sanitário (Região da Lagoa / Bebedouro / Fernão Velho) ---
@@ -463,7 +464,7 @@ async function main() {
       latitude: -9.6540,
       longitude: -35.7560,
       phone: '(82) 3312-5525',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2005638',
@@ -477,7 +478,7 @@ async function main() {
       latitude: -9.6350,
       longitude: -35.7650,
       phone: '(82) 3312-5530',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2005646',
@@ -491,7 +492,7 @@ async function main() {
       latitude: -9.5880,
       longitude: -35.7790,
       phone: '(82) 3312-5522',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2005700',
@@ -505,7 +506,7 @@ async function main() {
       latitude: -9.5750,
       longitude: -35.7920,
       phone: '(82) 3312-5532',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2005719',
@@ -519,7 +520,7 @@ async function main() {
       latitude: -9.6250,
       longitude: -35.7710,
       phone: '(82) 3312-5534',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2005727',
@@ -533,7 +534,7 @@ async function main() {
       latitude: -9.6105,
       longitude: -35.7620,
       phone: '(82) 3312-5535',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
 
     // --- 5º Distrito Sanitário (Jacintinho / Feitosa / Serraria) ---
@@ -549,7 +550,7 @@ async function main() {
       latitude: -9.6412,
       longitude: -35.7225,
       phone: '(82) 3315-5001',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2005611',
@@ -563,7 +564,7 @@ async function main() {
       latitude: -9.6380,
       longitude: -35.7180,
       phone: '(82) 3312-5540',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2005654',
@@ -577,7 +578,7 @@ async function main() {
       latitude: -9.6315,
       longitude: -35.7265,
       phone: '(82) 3312-5536',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2005662',
@@ -591,7 +592,7 @@ async function main() {
       latitude: -9.6240,
       longitude: -35.7140,
       phone: '(82) 3312-5538',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2005832',
@@ -605,7 +606,7 @@ async function main() {
       latitude: -9.6080,
       longitude: -35.7210,
       phone: '(82) 3312-5542',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
 
     // --- 6º Distrito Sanitário (Benedito Bentes) ---
@@ -621,7 +622,7 @@ async function main() {
       latitude: -9.5601,
       longitude: -35.7389,
       phone: '(82) 3315-5005',
-      openingHours: '07:00 às 19:00',
+      openingHours: 'Seg a Sex: 07:00 às 19:00',
     },
     {
       cnes: '2816873',
@@ -635,7 +636,7 @@ async function main() {
       latitude: -9.5490,
       longitude: -35.7340,
       phone: '(82) 3312-5548',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
 
     // --- 7º Distrito Sanitário (Tabuleiro / Clima Bom / Santos Dumont / Cidade Universitária) ---
@@ -651,7 +652,7 @@ async function main() {
       latitude: -9.5850,
       longitude: -35.7680,
       phone: '(82) 3312-5552',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2005786',
@@ -665,7 +666,7 @@ async function main() {
       latitude: -9.5780,
       longitude: -35.7720,
       phone: '(82) 3312-5555',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2003317',
@@ -679,7 +680,7 @@ async function main() {
       latitude: -9.5710,
       longitude: -35.7590,
       phone: '(82) 3312-5557',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '6481132',
@@ -693,7 +694,7 @@ async function main() {
       latitude: -9.5630,
       longitude: -35.7750,
       phone: '(82) 3312-5560',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '9000755',
@@ -707,7 +708,7 @@ async function main() {
       latitude: -9.5695,
       longitude: -35.7485,
       phone: '(82) 3312-5562',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2005824',
@@ -721,7 +722,7 @@ async function main() {
       latitude: -9.5520,
       longitude: -35.7820,
       phone: '(82) 3312-5565',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
 
     // --- 8º Distrito Sanitário (Litoral Norte de Maceió) ---
@@ -737,7 +738,7 @@ async function main() {
       latitude: -9.6052,
       longitude: -35.6881,
       phone: '(82) 3315-5004',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2009684',
@@ -751,7 +752,7 @@ async function main() {
       latitude: -9.5760,
       longitude: -35.6530,
       phone: '(82) 3312-5570',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2009714',
@@ -765,7 +766,7 @@ async function main() {
       latitude: -9.5480,
       longitude: -35.6290,
       phone: '(82) 3312-5572',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
     {
       cnes: '2009897',
@@ -779,7 +780,7 @@ async function main() {
       latitude: -9.5130,
       longitude: -35.5960,
       phone: '(82) 3312-5575',
-      openingHours: '07:00 às 17:00',
+      openingHours: 'Seg a Sex: 07:00 às 17:00',
     },
   ];
 

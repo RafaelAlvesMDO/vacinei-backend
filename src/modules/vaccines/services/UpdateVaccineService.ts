@@ -1,6 +1,7 @@
 import { prisma } from '../../../config/prisma';
 import { AppError } from '../../../errors/AppError';
 import { UpdateVaccineDTO } from '../dtos/vaccine.dto';
+import { findVaccineNameConflict } from './findVaccineNameConflict';
 
 export class UpdateVaccineService {
   async execute(id: string, data: UpdateVaccineDTO) {
@@ -12,10 +13,8 @@ export class UpdateVaccineService {
       throw new AppError('Vacina não encontrada.', 404);
     }
 
-    if (data.name && data.name !== vaccineExists.name) {
-      const nameConflict = await prisma.vaccine.findUnique({
-        where: { name: data.name },
-      });
+    if (data.name) {
+      const nameConflict = await findVaccineNameConflict(data.name, id);
 
       if (nameConflict) {
         throw new AppError('Já existe uma vacina cadastrada com este nome.', 409);
