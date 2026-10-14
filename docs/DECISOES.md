@@ -37,6 +37,11 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** vazamento do banco não expõe códigos válidos; evita enumeração de contas e força bruta.
 - **Requisito:** recuperação de senha; LGPD/segurança.
 
+### D16 — Desativação de usuário bloqueia o acesso na hora
+- **Decisão:** desativar um usuário (`DELETE /users/:id` ou `PUT /users/:id` com `isActive: false`) revoga todos os refresh tokens dele. O `ensureAuthenticated` consulta o banco a cada requisição e responde `401` se o usuário não existe ou está inativo, mesmo com access token válido.
+- **Motivo:** sem isso, o access token já emitido seguia válido por até 15 min. O custo é uma consulta por chave primária a cada requisição autenticada.
+- **Requisito:** RBAC; RNF de segurança.
+
 ## Privacidade (LGPD)
 
 ### D05 — Admin acessa só dados agregados de vacinação
