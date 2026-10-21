@@ -4,7 +4,7 @@ API REST da plataforma VACINEI!?, caderneta de vacinação digital. Atende dois 
 Domínios: autenticação/RBAC, usuários, dependentes, vacinas/doses, caderneta, UBSs com geolocalização, campanhas, relatórios e notificações push.
 Pré-banca: **15/10/2026**. Priorize entregas demonstráveis.
 
-**Stack:** Node 20+, TypeScript, Express 5, PostgreSQL (Docker) + Prisma 6, Zod 4, JWT + refresh token opaco no banco, bcryptjs. Previsto: Nodemailer (Ethereal), mock de SMS, FCM e OCR em Python (OpenCV + Tesseract).
+**Stack:** Node 20+, TypeScript, Express 5, PostgreSQL (Docker) + Prisma 6, Zod 4, JWT + refresh token opaco no banco, bcryptjs. Previsto: Nodemailer (Ethereal), mock de SMS, notificações locais no app com Expo Push como complemento (não FCM direto) e OCR como microsserviço Python (OpenCV + pytesseract) chamado por HTTP (não `child_process`).
 Scripts: `npm run dev` (tsx watch), `npm run build` (tsc), `npx prisma db seed`.
 
 ## Contexto

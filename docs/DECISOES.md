@@ -126,6 +126,28 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** evitar vacinas duplicadas no catálogo por diferença só de grafia.
 - **Requisito:** RF008.
 
+## App mobile
+
+### D23 — Login único com alas Cidadão e Profissional
+- **Decisão:** o app tem um só login, por e-mail e senha (RF002).
+  - `CIDADAO` vai direto para a ala Cidadão.
+  - `PROFISSIONAL_SAUDE` escolhe entre a ala Cidadão e a ala Profissional, cada uma com sua barra de abas. O app lembra a última ala escolhida e permite alternar pelo Perfil.
+  - O profissional não verificado vê, na ala Profissional, o aviso de verificação pendente ou recusada (RS001).
+  - `ADMIN` não usa o app: ele usa o Gerenciador Web.
+  - As alas são só navegação. As permissões continuam no backend (D01).
+- **Motivo:** o profissional também é cidadão (D11) e precisa da própria caderneta sem uma segunda conta. Separar as alas evita misturar as funções de atendimento com as pessoais.
+- **Requisito:** RF002, RS001, RS006.
+
+### D24 — Notificações locais como base; Expo Push como complemento
+- **Decisão:** os alertas de vacinação são notificações locais agendadas no aparelho (`expo-notifications`), calculadas a partir da caderneta. O Expo Push entra só como complemento (avisos enviados pelo servidor) e exige development build. O FCM direto deixa de ser o plano.
+- **Motivo:** notificações locais não têm custo, não dependem de backend novo e funcionam no Expo Go, usado nos testes. O Expo Go não recebe push remoto no Android.
+- **Requisito:** RF007.
+
+### D25 — OCR como microsserviço Python chamado pelo backend
+- **Decisão:** o OCR da caderneta física roda em um microsserviço Python separado (OpenCV no pré-processamento + `pytesseract`). O app envia a foto ao backend, que chama o serviço e devolve as doses reconhecidas para revisão. Os registros são gravados com origem `OCR_ICR` e ficam pendentes de confirmação (D06). Se o OCR falhar, o app oferece o cadastro manual.
+- **Motivo:** isola as dependências de visão computacional da API Node e mantém o app como cliente simples (D01).
+- **Requisito:** RF004, RS003, RNF05, RNF12.
+
 ## Pendências
 
 ### D09 — Dependentes ainda não implementados
