@@ -78,6 +78,8 @@ export const createUserSchema = z.object({
   birthDate: birthDateSchema,
   role: z.nativeEnum(UserRole).default(UserRole.CIDADAO),
   professionalRegistry: professionalRegistrySchema.optional(),
+  // Consentimento LGPD explícito (D26): só true é aceito
+  acceptedPrivacyPolicy: z.literal(true, 'É necessário aceitar a Política de Privacidade'),
 }).refine((data) => {
   if (data.role === UserRole.PROFISSIONAL_SAUDE && !data.professionalRegistry) {
     return false;

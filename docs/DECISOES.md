@@ -67,6 +67,11 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** o `PUT /users/me` e o `PUT /users/:id` com o próprio id deixavam o usuário alterar celular e data de nascimento, contra o RF003. O frontend web não usava a rota; só o admin usa `PUT /users/:id` (`{ isActive }`).
 - **Requisito:** RF003 (notas 3, 5 e 6); RS002.
 
+### D27 — Logout revoga o refresh token no servidor, de forma idempotente
+- **Decisão:** `POST /auth/logout` recebe o `refreshToken` da sessão atual e grava `revokedAt` nele. Responde sempre `204`, mesmo se o token não existir, estiver expirado ou já revogado. A rota é pública: o próprio refresh token prova a sessão, e o access token pode já ter expirado quando o usuário sai.
+- **Motivo:** apagar o token só no cliente deixaria a sessão válida por até 30 dias se o token tivesse vazado. A resposta idempotente deixa o cliente sair sempre e não revela se um token existe.
+- **Requisito:** RNF de segurança; LGPD.
+
 ## Privacidade (LGPD)
 
 ### D05 — Admin acessa só dados agregados de vacinação
@@ -86,6 +91,12 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
   - LGPD: princípios da finalidade, necessidade e minimização. Quem já tem o CPF em mãos confirma a identidade, mas a API não divulga o número a terceiros.
 - **Observação:** no banco as colunas continuam aceitando nulo por causa de registros antigos. A obrigatoriedade é garantida pela validação (Zod) no cadastro.
 - **Requisito:** RF001, RF007, RF010; LGPD.
+
+### D26 — Consentimento explícito à Política de Privacidade no cadastro
+- **Decisão:** `POST /users` exige `acceptedPrivacyPolicy: true` (`400` se ausente ou `false`). O backend grava em `User` a data/hora do aceite (`privacyConsentAt`) e a versão da política aceita (`privacyPolicyVersion`, hoje `"2026-10"`, em `src/config/privacy.ts`). Os dois campos só aparecem para o próprio titular (`GET /auth/me`), nunca em respostas sobre outra pessoa. Os usuários do seed já nascem com o consentimento preenchido.
+- **Motivo:** a LGPD exige que o controlador prove o consentimento (art. 8º, §2º), e dado de saúde precisa de consentimento específico e destacado (art. 11, I). Guardar a versão permite saber a qual texto o usuário concordou e pedir novo aceite quando a política mudar.
+- **Observação:** as colunas aceitam nulo por causa de contas anteriores à exigência. A obrigatoriedade é garantida pela validação (Zod) no cadastro, como no D14.
+- **Requisito:** RF001; LGPD.
 
 ### D21 — Lista de doses atrasadas só para profissional verificado (busca ativa)
 - **Decisão:** o `GET /dashboard/overdue` lista as pessoas (CIDADAO e PROFISSIONAL_SAUDE ativos) com vacina `ATRASADA`, com nome, CPF mascarado e as vacinas em atraso. Só o profissional verificado acessa; o `ADMIN` continua apenas com o total agregado do `/summary` (D05). O cálculo é o mesmo do card "Doses atrasadas", para que os números batam.

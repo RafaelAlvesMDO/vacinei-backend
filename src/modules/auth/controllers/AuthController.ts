@@ -11,6 +11,7 @@ import { UpdateProfileService } from '../services/UpdateProfileService';
 import { ChangePasswordService } from '../services/ChangePasswordService';
 import { AuthenticateUserService } from '../services/AuthenticateUserService';
 import { RefreshTokenService } from '../services/RefreshTokenService';
+import { LogoutService } from '../services/LogoutService';
 import { ForgotPasswordService } from '../services/ForgotPasswordService';
 import { ResetPasswordService } from '../services/ResetPasswordService';
 import { prisma } from '../../../config/prisma';
@@ -40,6 +41,15 @@ export class AuthController {
       status: 'success',
       data: result,
     });
+  }
+
+  async logout(req: Request, res: Response): Promise<Response> {
+    const validatedData = refreshTokenSchema.parse(req.body);
+
+    const logoutService = new LogoutService();
+    await logoutService.execute(validatedData);
+
+    return res.status(204).send();
   }
 
   async forgotPassword(req: Request, res: Response): Promise<Response> {
@@ -117,6 +127,9 @@ export class AuthController {
         avatarUrl: true,
         isActive: true,
         createdAt: true,
+        // Consentimento LGPD: visível só para o próprio titular (D26)
+        privacyConsentAt: true,
+        privacyPolicyVersion: true,
         professionalRegistry: true,
         dependents: true,
       },
