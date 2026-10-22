@@ -1,6 +1,7 @@
 import { PrismaClient, UserRole, TargetAudience, RecordOrigin, VaccineStatus, ProfessionalCategory } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { authConfig } from '../src/config/auth';
+import { privacyConfig } from '../src/config/privacy';
 
 const prisma = new PrismaClient();
 
@@ -162,6 +163,8 @@ async function main() {
   await prisma.user.deleteMany();
 
   const defaultPasswordHash = await bcrypt.hash(DEFAULT_PASSWORD, authConfig.bcryptSaltRounds);
+  // Todos os usuários do seed já aceitaram a Política de Privacidade (D26)
+  const privacyConsent = { privacyConsentAt: new Date(), privacyPolicyVersion: privacyConfig.policyVersion };
 
   // 2. Criação dos Usuários de Teste (RBAC)
   console.log('👤 Criando usuários de teste...');
@@ -170,6 +173,7 @@ async function main() {
       name: 'Administrador do Sistema',
       email: 'admin@vacinei.com.br',
       passwordHash: defaultPasswordHash,
+      ...privacyConsent,
       cpf: generateCpf(100000001),
       phone: '82999990001',
       birthDate: new Date('1985-09-02'),
@@ -183,6 +187,7 @@ async function main() {
       name: 'Enf. Mariana Costa',
       email: 'mariana.costa@vacinei.com.br',
       passwordHash: defaultPasswordHash,
+      ...privacyConsent,
       cpf: generateCpf(100000002),
       phone: '82999990002',
       birthDate: new Date('1990-03-10'),
@@ -207,6 +212,7 @@ async function main() {
       name: 'Carlos Eduardo Souza',
       email: 'carlos.souza@vacinei.com.br',
       passwordHash: defaultPasswordHash,
+      ...privacyConsent,
       cpf: generateCpf(100000003),
       phone: '82999990003',
       birthDate: new Date('1992-05-14'),
@@ -239,6 +245,7 @@ async function main() {
       name: 'Téc. Paulo Ribeiro',
       email: 'paulo.ribeiro@vacinei.com.br',
       passwordHash: defaultPasswordHash,
+      ...privacyConsent,
       cpf: generateCpf(100000004),
       phone: '82999990004',
       birthDate: new Date('1995-07-22'),
@@ -964,6 +971,7 @@ async function main() {
         name: entry.name,
         email: `cidadao${number}@vacinei.com.br`,
         passwordHash: defaultPasswordHash,
+        ...privacyConsent,
         cpf: generateCpf(600000000 + index + 1),
         phone: `829888800${number}`,
         birthDate: profile.bornDaysAgo !== undefined

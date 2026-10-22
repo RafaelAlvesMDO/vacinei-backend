@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { UserRole } from '@prisma/client';
 import { prisma } from '../../../config/prisma';
 import { authConfig } from '../../../config/auth';
+import { privacyConfig } from '../../../config/privacy';
 import { AppError } from '../../../errors/AppError';
 import { CreateUserDTO } from '../dtos/user.dto';
 import { COUNCIL_BY_CATEGORY, parseRegistryNumber } from '../../../utils/professionalCouncil';
@@ -91,6 +92,9 @@ export class CreateUserService {
         phone,
         birthDate: new Date(birthDate),
         role,
+        // acceptedPrivacyPolicy já garantido como true no DTO (D26)
+        privacyConsentAt: new Date(),
+        privacyPolicyVersion: privacyConfig.policyVersion,
         ...(registry
           ? {
               professionalRegistry: {

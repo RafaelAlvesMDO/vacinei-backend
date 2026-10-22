@@ -18,8 +18,8 @@ Guia de contexto, arquitetura, stack e regras para o desenvolvimento do backend 
 - **Validação de Dados:** Zod
 - **Autenticação:** JWT (Access Token) + Refresh Tokens (persistidos no banco para revogação)
 - **Criptografia:** `bcrypt` para hash de senhas
-- **Processamento de Imagens, OCR & ICR:** Python (`opencv-python` + `pytesseract`) executado via `child_process` através de Provider isolado
-- **Notificações Push:** Firebase Cloud Messaging (FCM via `firebase-admin`), com suporte multi-cliente (Mobile e Web)
+- **Processamento de Imagens, OCR & ICR:** microsserviço Python (`opencv-python` + `pytesseract`) chamado pelo backend via HTTP através do `OcrProvider` (D25)
+- **Notificações:** notificações locais agendadas no app (`expo-notifications`) como base; Expo Push (Expo Push API) como complemento para avisos enviados pelo servidor (D24)
 - **Geolocalização:** OpenStreetMap (cálculo de distâncias via fórmula de Haversine)
 - **Comunicação Externa:** E-mail via Nodemailer (Ethereal em dev) e SMS via MockProvider
 
@@ -42,12 +42,12 @@ src/
 │   ├── ubs/             # Gerenciamento e geolocalização de UBSs
 │   ├── campaigns/       # Campanhas vacinais (criação, listagem e engajamento)
 │   ├── reports/         # Relatórios e indicadores epidemiológicos
-│   └── notifications/   # Registro de tokens FCM e histórico de notificações
+│   └── notifications/   # Registro de tokens Expo Push e histórico de notificações
 │       └── [modulo]/    # controllers/, dtos/, services/, repositories/
 ├── providers/       # Abstrações e implementações de serviços externos
 │   ├── MailProvider/    # IMailProvider + EtherealMailProvider
 │   ├── SmsProvider/     # ISmsProvider + MockSmsProvider
-│   ├── PushProvider/    # IPushProvider + FcmPushProvider (Firebase Mobile & Web)
+│   ├── PushProvider/    # IPushProvider + ExpoPushProvider (Expo Push API)
 │   └── OcrProvider/     # IOcrProvider + PythonChildProcessOcrProvider (OpenCV + ICR)
 ├── scripts/         # Scripts auxiliares Python (ex: ocr_icr_parser.py)
 ├── utils/           # Funções utilitárias (cálculo de distâncias, máscaras)
@@ -107,12 +107,11 @@ src/
   - Binarização adaptativa (ex: Otsu / Adaptive Thresholding);
   - Morfologia e segmentação de regiões de interesse (ROI) da caderneta.
 - **Suporte a ICR (Intelligent Character Recognition):** Otimizado via `pytesseract` com modelos/configurações para reconhecimento de caracteres e escrita manual em registros de doses e datas.
-- **Execução Isolada:** Invocado via `child_process` pelo `OcrProvider`.
+- **Microsserviço Isolado (D25):** O pipeline roda em um serviço Python separado, exposto por HTTP. O app envia a foto ao backend, e o `OcrProvider` chama o serviço por HTTP e devolve as doses reconhecidas para revisão. Os registros são gravados com origem `OCR_ICR` e ficam pendentes de confirmação (D06).
 - **Fallback Automático (RF005):** Caso a qualidade ou o nível de confiança da extração seja insuficiente, retornar erro amigável orientando o preenchimento manual sem perda dos dados já submetidos.
 
-### 4.5. Notificações Push com Firebase Cloud Messaging (FCM)
-- **Suporte Multi-Aplicação:** O backend integra com o Firebase Console prevendo registro de 2 aplicações sob o mesmo projeto:
-  - **App Mobile:** (Expo / React Native via tokens FCM Mobile / APNs).
-  - **Painel Web:** (Web Push Notification via service workers / VAPID).
-- **Armazenamento de Tokens:** Tabela de dispositivos associando `user_id`, `fcm_token` e tipo de cliente (`MOBILE` ou `WEB`).
-- **Disparo Unificado:** O `PushProvider` abstrai as particularidades de payload (notificação nativa mobile vs. web push notification) mantendo interface unificada de envio.
+### 4.5. Notificações: locais + Expo Push (D24)
+- **Base — Notificações Locais:** Os alertas de vacinação são agendados no próprio aparelho (`expo-notifications`), calculados a partir da caderneta retornada pela API. Não dependem do backend e funcionam no Expo Go.
+- **Complemento — Expo Push:** Avisos originados no servidor (ex.: campanhas) são enviados pela Expo Push API. Exige development build (o Expo Go não recebe push remoto no Android).
+- **Armazenamento de Tokens:** Tabela de dispositivos associando `user_id` e `expo_push_token`.
+- **Disparo:** O `PushProvider` (`ExpoPushProvider`) abstrai o envio. FCM direto não faz parte do plano.

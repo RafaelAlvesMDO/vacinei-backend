@@ -60,6 +60,12 @@ Senha de todos: **`Vacinei@2026`**
   - `401`: refresh token não encontrado, revogado ou expirado.
   - `403`: usuário inativo.
 
+### POST `/auth/logout`
+- **Acesso:** Público (o refresh token identifica a sessão).
+- **Body:** `{ refreshToken }`, o da sessão atual.
+- **204:** sem corpo. Revoga o refresh token no servidor. Responde `204` mesmo se o token não existir, estiver expirado ou já revogado (D27). O cliente deve descartar o access token e o refresh token.
+- **Erros:** `400` (validação).
+
 ### POST `/auth/forgot-password`
 - **Acesso:** Público
 - **Body:** `{ email }`
@@ -76,7 +82,8 @@ Senha de todos: **`Vacinei@2026`**
 
 ### GET `/auth/me`
 - **Acesso:** Autenticado
-- **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, professionalRegistry, dependents[] }`
+- **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, privacyConsentAt, privacyPolicyVersion, professionalRegistry, dependents[] }`
+  - `privacyConsentAt` (ISO 8601) e `privacyPolicyVersion` (ex: `"2026-10"`): consentimento LGPD dado no cadastro (D26). Podem ser `null` em contas antigas. Só o próprio titular vê esses campos.
   - `professionalRegistry`: mesmo formato do login, `{ isVerified, status }` para `PROFISSIONAL_SAUDE` e `null` para os outros perfis.
 - **Erros:**
   - `401`: não autenticado.
@@ -103,7 +110,8 @@ Senha de todos: **`Vacinei@2026`**
 
 ### POST `/users` (cadastro)
 - **Acesso:** Público. Token opcional: com token de ADMIN, também é possível criar outro ADMIN, e o profissional criado já nasce verificado.
-- **Body:** `{ name, email, password, phone, cpf, birthDate, role?, professionalRegistry? }` (RF001). `cpf` e `birthDate` são obrigatórios para todos os perfis (D14).
+- **Body:** `{ name, email, password, phone, cpf, birthDate, acceptedPrivacyPolicy, role?, professionalRegistry? }` (RF001). `cpf` e `birthDate` são obrigatórios para todos os perfis (D14).
+  - `acceptedPrivacyPolicy`: precisa ser `true` (`400` se ausente ou `false`). O backend grava a data/hora do aceite e a versão vigente da política (D26). Esses campos não voltam na resposta; o titular os vê em `GET /auth/me`.
   - `name`: até 120 caracteres, com nome e sobrenome (mínimo duas palavras).
   - `email`: até 100 caracteres, único.
   - `password`: segue a regra de senha.
@@ -118,7 +126,7 @@ Senha de todos: **`Vacinei@2026`**
     - `uf`: obrigatório se o número não tiver o sufixo `-UF`. Se vierem os dois, precisam ser iguais.
 - **201:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, professionalRegistry }`, com `cpf` só com números. O profissional criado no cadastro público nasce com `isVerified = false` e fica pendente de verificação pelo admin. Se quem cria é um ADMIN, ele nasce com `isVerified = true`, `verifiedAt` = agora e `verifiedById` = id do admin.
 - **Erros:**
-  - `400`: validação, inclusive senha fraca, CPF inválido e data de nascimento futura.
+  - `400`: validação, inclusive senha fraca, CPF inválido, data de nascimento futura e Política de Privacidade não aceita.
   - `401`: token enviado, mas inválido.
   - `403`: `Apenas administradores podem criar contas de administrador.`
   - `409`: e-mail, CPF ou registro profissional já cadastrado.
