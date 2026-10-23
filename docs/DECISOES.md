@@ -137,6 +137,18 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** evitar vacinas duplicadas no catálogo por diferença só de grafia.
 - **Requisito:** RF008.
 
+### D28 — Dados das UBS do seed conferidos com o CNES/DATASUS
+- **Decisão:** CEP, logradouro, número, bairro, telefone e coordenadas das UBS do seed vêm do CNES/DATASUS (arquivo `tbEstabelecimento`, competência 2026.09, acessado em 23/10/2026). Nomes e horários continuam os do seed. Um campo só é atualizado quando o valor do CNES está preenchido e o código CNES corresponde à mesma unidade (mesmo nome). Coordenadas só são aceitas dentro de Maceió (lat -9.75 a -9.30, lon -35.90 a -35.55); fora disso, mantém-se a anterior e a UBS fica pendente de conferência. Unidades desativadas no CNES (`CO_MOTIVO_DESAB`) não são desativadas automaticamente. CEPs do CNES são mantidos mesmo quando genéricos (ex.: 57080-000).
+- **Ajustes na conferência:** códigos que apontavam para outro estabelecimento foram trocados pelo código correto, buscado por nome entre as UBS de Maceió. Chã de Bebedouro e Rio Novo passaram a usar o nome oficial do CNES. Lourença de Carvalho foi substituída pela unidade real do código 2009684 (UBS Vanderli Maria de Andrade, Riacho Doce). Gruta de Lourdes e Petrópolis saíram do seed por não terem correspondente no CNES. O seed ficou com 34 UBS.
+- **Coordenadas conferidas manualmente:** nestas 4 UBS a coordenada está incorreta na própria base do CNES, conforme as fichas do estabelecimento. O endereço segue o CNES e a posição foi obtida no Google Maps a partir do endereço oficial (dentro dos limites de Maceió). Não resta nenhuma UBS a conferir.
+  - 3020738 UBS Geraldo Melo (Rua do Campo, s/n, Bom Parto): a do CNES caía a 30 km, perto de Paripueira. Agora -9.64921, -35.74615.
+  - 2009870 USF Prof. Durval Cortez (Rua João Lúcio Marques, 64, Prado): a do CNES caía a 10 km, fora da área urbana. Agora -9.67059, -35.74658.
+  - 2003325 UBS Dr. Aliomar Almeida Lins (Lot. Bela Vista II, s/n, Benedito Bentes II): a do CNES caía no oceano (lon -34.86). O endereço antigo do seed (Rua Goiás, Farol) foi trocado pelo do CNES, com telefone e horário da ficha. Agora -9.56344, -35.72431.
+  - 9306471 UBS Maria Tereza Holanda Costa (Rua Padre Cícero, 224, Ouro Preto): a do CNES caía fora de Maceió (lon -36.06). Sem telefone no CNES. Agora -9.60406, -35.73144.
+- **Acentuação:** logradouros que vieram do CNES sem acento foram corrigidos só quando a grafia correta é evidente (ex.: Rua São Luís, Rua Muniz Falcão).
+- **Motivo:** usar fonte oficial em vez de endereços aproximados, sem misturar dados de estabelecimentos diferentes nem aceitar coordenadas visivelmente erradas do cadastro.
+- **Requisito:** RF008.
+
 ## App mobile
 
 ### D23 — Login único com alas Cidadão e Profissional
