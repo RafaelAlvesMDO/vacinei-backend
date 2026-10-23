@@ -137,6 +137,17 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** evitar vacinas duplicadas no catálogo por diferença só de grafia.
 - **Requisito:** RF008.
 
+### D28 — Dados das UBS do seed conferidos com o CNES/DATASUS
+- **Decisão:** CEP, logradouro, número, bairro, telefone e coordenadas das UBS do seed vêm do CNES/DATASUS (arquivo `tbEstabelecimento`, competência 2026.09, acessado em 23/10/2026). Nomes e horários continuam os do seed. Um campo só é atualizado quando o valor do CNES está preenchido e o código CNES corresponde à mesma unidade (mesmo nome). Coordenadas só são aceitas dentro de Maceió (lat -9.75 a -9.30, lon -35.90 a -35.55); fora disso, mantém-se a anterior e a UBS fica pendente de conferência. Unidades desativadas no CNES (`CO_MOTIVO_DESAB`) não são desativadas automaticamente. CEPs do CNES são mantidos mesmo quando genéricos (ex.: 57080-000).
+- **Ajustes na conferência:** códigos que apontavam para outro estabelecimento foram trocados pelo código correto, buscado por nome entre as UBS de Maceió. Chã de Bebedouro e Rio Novo passaram a usar o nome oficial do CNES. Lourença de Carvalho foi substituída pela unidade real do código 2009684 (UBS Vanderli Maria de Andrade, Riacho Doce). Gruta de Lourdes e Petrópolis saíram do seed por não terem correspondente no CNES. O seed ficou com 34 UBS.
+- **Coordenadas a conferir manualmente:** permanecem com a coordenada anterior, aproximada.
+  - 3020738 UBS Geraldo Melo: a do CNES cai a 30 km, perto de Paripueira.
+  - 2009870 USF Prof. Durval Cortez: a do CNES cai a 10 km, fora da área urbana.
+  - 2003325 UBS Dr. Aliomar Almeida Lins: a do CNES cai no oceano (lon -34.86). O bairro também diverge: o seed diz Farol e o CNES diz Benedito Bentes II.
+  - 9306471 UBS Maria Tereza Holanda Costa: a do CNES cai fora de Maceió (lon -36.06).
+- **Motivo:** usar fonte oficial em vez de endereços aproximados, sem misturar dados de estabelecimentos diferentes nem aceitar coordenadas visivelmente erradas do cadastro.
+- **Requisito:** RF008.
+
 ## App mobile
 
 ### D23 — Login único com alas Cidadão e Profissional
