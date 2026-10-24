@@ -171,6 +171,11 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** isola as dependências de visão computacional da API Node e mantém o app como cliente simples (D01).
 - **Requisito:** RF004, RS003, RNF05, RNF12.
 
+### D29 — "Ver no mapa" do detalhe da vacina abre a localização de UBS
+- **Decisão:** o atalho "Ver UBS no mapa" do detalhe da vacina redireciona para a localização de UBS (aba UBS, já no Mapa). Exibir a UBS onde a dose foi aplicada fica como melhoria futura.
+- **Motivo:** hoje a confirmação de dose não registra a UBS, e incluí-la muda o fluxo do backend.
+- **Requisito:** RF008 (nota 9).
+
 ## Pendências
 
 ### D09 — Dependentes ainda não implementados
