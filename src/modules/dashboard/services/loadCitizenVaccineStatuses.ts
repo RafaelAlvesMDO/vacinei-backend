@@ -1,12 +1,13 @@
 import { prisma } from '../../../config/prisma';
 import { CITIZEN_ROLES } from '../../../utils/citizenRoles';
-import { calculateVaccineStatus } from '../../vaccination-records/services/CalculateVaccineStatusService';
+import { calculateAlertStatus } from '../../vaccination-records/services/CalculateVaccineStatusService';
 
 /**
  * Carrega os registros das cadernetas de cidadãos e profissionais ativos (D11)
- * e calcula o status de cada par pessoa/vacina com a mesma regra do
- * CalculateVaccineStatusService, em lote. Compartilhado pelo /summary e pelo
- * /overdue para que o card "Doses atrasadas" e a lista de busca ativa batam.
+ * e calcula a situação de cada par pessoa/vacina com o calculateAlertStatus
+ * (D32), em lote: doses atrasadas sem registro e doses informadas aguardando
+ * conferência. Compartilhado pelo /summary e pelo /overdue para que o card
+ * "Doses atrasadas" e a lista de busca ativa batam.
  * Dependentes entram com o RF012.
  */
 export async function loadCitizenVaccineStatuses(referenceDate = new Date()) {
@@ -18,6 +19,7 @@ export async function loadCitizenVaccineStatuses(referenceDate = new Date()) {
     select: {
       userId: true,
       doseId: true,
+      status: true,
       applicationDate: true,
       dose: { select: { vaccineId: true, vaccine: { select: { name: true } } } },
       user: { select: { name: true, cpf: true, birthDate: true } },
@@ -47,7 +49,7 @@ export async function loadCitizenVaccineStatuses(referenceDate = new Date()) {
       user,
       vaccineId: dose.vaccineId,
       vaccineName: dose.vaccine.name,
-      ...calculateVaccineStatus({
+      ...calculateAlertStatus({
         doses: dosesByVaccine.get(dose.vaccineId) ?? [],
         records: group,
         birthDate: user?.birthDate,
