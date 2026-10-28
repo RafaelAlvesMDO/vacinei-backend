@@ -236,6 +236,36 @@ Objeto `Professional`:
 
 ## Vaccination records (`/vaccination-records`)
 
+No registro, `status` diferente de `CONFIRMADO` (hoje sempre `EM_DIA`) significa **aguardando confirmação** (D30).
+
+### POST `/vaccination-records` (cadastro manual, RF005)
+- **Acesso:** `CIDADAO` ou `PROFISSIONAL_SAUDE` (verificado ou não). O registro vai sempre para a caderneta do usuário logado (id do token).
+- **Body:** `{ vaccineId, doseId, applicationDate, lote? }`.
+  - `applicationDate`: `YYYY-MM-DD` ou ISO 8601. Não pode ser futura nem anterior à data de nascimento do usuário.
+  - `lote`: opcional. Mesma regra do confirm: de 1 a 20 caracteres alfanuméricos, salvo em maiúsculas.
+- **201:** `data: { record: { id, userId, status: "EM_DIA", origin: "MANUAL", applicationDate, lotNumber, dose: { id, doseNumber, doseName, vaccine: { id, name } }, createdAt, updatedAt }, vaccineStatus }`. O registro aparece na caderneta e no dashboard aguardando confirmação. Quando confirmado em `/confirm`, a resposta traz `action: "CONFIRMED_EXISTING"`.
+- **Erros:**
+  - `400`: validação, data futura ou anterior ao nascimento, ou a dose não pertence à vacina.
+  - `401`.
+  - `403`: perfil `ADMIN`.
+  - `404`: vacina não encontrada ou inativa.
+  - `409`: `Esta dose já está registrada na sua caderneta.`
+
+### PUT `/vaccination-records/:id` (edição pelo titular)
+- **Acesso:** mesmo do `POST`. Só o titular, e só enquanto o registro não estiver `CONFIRMADO`.
+- **Body:** o mesmo do `POST`. A edição substitui o registro: se o `lote` for omitido, ele fica nulo.
+- **200:** mesmo formato do `POST`.
+- **Erros:**
+  - `400`, `401`.
+  - `403`: `Acesso negado a este registro de vacinação.` (registro de outra pessoa ou de dependente) ou `Registros confirmados por um profissional não podem ser alterados.`
+  - `404`: registro, vacina ou dose não encontrados.
+  - `409`: a nova dose já existe em outro registro da caderneta.
+
+### DELETE `/vaccination-records/:id` (exclusão pelo titular)
+- **Acesso e regras:** mesmos do `PUT`.
+- **204:** sem corpo.
+- **Erros:** `400` (id não é UUID), `401`, `403` (mesmas mensagens do `PUT`), `404`.
+
 ### POST `/vaccination-records/confirm` (confirmação presencial, RF010)
 - **Acesso:** Profissional verificado. O profissional aplicador vem da sessão.
 - **Body:** `{ citizenId, vaccineId, doseId, lote }`. `citizenId` pode ser de um `CIDADAO` ou de outro `PROFISSIONAL_SAUDE`. `lote` tem 1 a 20 caracteres alfanuméricos e é salvo em maiúsculas.

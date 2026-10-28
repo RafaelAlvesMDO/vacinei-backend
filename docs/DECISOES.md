@@ -120,6 +120,16 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** profissionais também se vacinam; a autoconfirmação quebraria a validação por terceiro que dá valor ao status `CONFIRMADO`.
 - **Requisito:** RF009, RF010, RS006.
 
+### D30 — Cadastro manual pelo titular, editável até a confirmação
+- **Decisão:** `CIDADAO` e `PROFISSIONAL_SAUDE` (verificado ou não, D11) registram doses na própria caderneta via `POST /vaccination-records`. O titular vem sempre do token. O registro nasce com origem `MANUAL` e aguardando confirmação (D06).
+  - **Validações (RS003):** a vacina precisa existir e estar ativa. A dose precisa pertencer à vacina. A data de aplicação não pode ser futura nem anterior à data de nascimento do titular. O lote é opcional e segue a regra do confirm. A mesma dose não pode ser registrada duas vezes na caderneta (409).
+  - **Edição e exclusão:** o titular edita (`PUT`) ou exclui (`DELETE`) o próprio registro só enquanto ele não estiver `CONFIRMADO`. Registro de outra pessoa ou já confirmado responde 403. Depois da confirmação, só um profissional pode corrigir o registro (trabalho futuro).
+  - **Status do registro:** o campo `status` do `VaccinationRecord` reaproveita o enum `VaccineStatus`. Num registro, **qualquer valor diferente de `CONFIRMADO` (hoje `EM_DIA`) significa "aguardando confirmação"**. Os valores `ATRASADA` e `COMPLETA` descrevem o esquema da vacina, calculado na caderneta, e não o registro. Na confirmação (`/confirm`), o registro manual é promovido com `action: "CONFIRMED_EXISTING"`, como os registros do seed.
+  - **Dependentes:** o modelo já tem `dependentId` opcional, mas o endpoint ainda não aceita esse campo. Só registros da caderneta do próprio titular (`dependentId` nulo) são criados ou alterados. A lógica de dependentes fica para a etapa 7 (D09).
+- **Melhoria futura:** separar um enum próprio para o status do registro (ex.: `PENDENTE`/`CONFIRMADO`), sem misturar com o status do esquema vacinal. Isso exige migration e ajustes no seed, na caderneta, no dashboard e no confirm.
+- **Motivo:** permitir que o cidadão digitalize o histórico (RF005) sem que um registro não validado ganhe o peso de uma confirmação presencial. Bloquear a alteração após a confirmação preserva a validação por terceiro (RS006). Reaproveitar o enum evita uma migration perto da pré-banca.
+- **Requisito:** RF005, RS003, RS004, RF010.
+
 ## Catálogo
 
 ### D08 — Vacinas e UBSs gerenciadas só pelo admin; leitura pública
