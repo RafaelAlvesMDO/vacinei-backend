@@ -59,6 +59,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
    - Função pura `calculateVaccineStatus` (`vaccination-records/services/CalculateVaccineStatusService.ts`), sem acesso ao banco, para reuso pelo motor de alertas (RF007). Próxima dose = última aplicação + `intervalDaysFromPrevious`; sem intervalo, nascimento + `recommendedAgeMonths`. `ATRASADA` quando a data prevista já passou.
    - O status calculado (`EM_DIA`/`ATRASADA`/`COMPLETA`) não é persistido: é derivado por vacina a cada consulta. O campo `status` do registro só distingue `CONFIRMADO` (presencial) dos registros manuais/OCR.
    - A caderneta lista só vacinas com ao menos um registro (evita marcar adultos como atrasados em vacinas infantis).
+   - **D32 (2026-10-28):** `calculateAlertStatus` separa `ATRASADA` (dose vencida sem nenhum registro) de `AGUARDANDO_CONFERENCIA` (doses informadas e não confirmadas, `pendingDoses`, sem dias de atraso). Usada pelo campo `alert` da caderneta (alertas do app, RF007 nota 7), pelo `/dashboard/overdue` (`?status=ATRASADA|AGUARDANDO_CONFERENCIA`, `counts` e `doseCounts`) e pelo `/dashboard/summary` (`totalDosesAguardandoConferencia`).
    - Acesso a profissional verificado via middleware `ensureVerifiedProfessional` (consulta `professionalRegistry.isVerified` no banco a cada requisição).
    - Busca sem acentos usa a extensão PostgreSQL `unaccent` (migration `20261010231422_enable_unaccent_extension`).
 
