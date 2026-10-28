@@ -222,10 +222,15 @@ Objeto `Professional`:
       vaccine: { id, name, targetDisease, dosesCount },
       status: EM_DIA | ATRASADA | COMPLETA,
       appliedDoses, totalDoses, lastDose, nextDose, nextDoseDate,
+      alert: {
+        status: ATRASADA | AGUARDANDO_CONFERENCIA | EM_DIA | COMPLETA,
+        pendingDoses: [{ id, doseNumber, doseName, applicationDate }]
+      },
       records: [{ id, status, origin, applicationDate, lotNumber, dose, ubs, appliedBy }]
     }]
   }
   ```
+- **`status` × `alert`:** o `status` (e o `summary`) contam todo registro como dose aplicada, confirmado ou não, e dão a próxima dose (`nextDose`/`nextDoseDate`). O `alert` segue o D32 (RF007 nota 7): só a dose confirmada encerra a pendência. `ATRASADA` quando há dose vencida sem nenhum registro; senão, `AGUARDANDO_CONFERENCIA` quando há doses informadas não confirmadas (`pendingDoses`, sem dias de atraso); senão, o `status`. Uma vacina `ATRASADA` também pode ter `pendingDoses`. É o campo usado pelos alertas do app.
 - **Erros:**
   - `400`: id não é UUID.
   - `401`.
@@ -360,10 +365,15 @@ Objeto `Ubs`: `{ id, cnes, name, zipCode, address (logradouro), number, neighbor
 
 | Método | Rota | Query | Resposta 200 (`data`) |
 | :--- | :--- | :--- | :--- |
-| GET | `/dashboard/summary` | — | `{ totalCadernetas, totalVacinasRegistradas, totalDosesAtrasadas }` |
+| GET | `/dashboard/summary` | — | `{ totalCadernetas, totalVacinasRegistradas, totalDosesAtrasadas, totalDosesAguardandoConferencia }` |
 | GET | `/dashboard/recent-doses` | `limit?` (1 a 50, padrão 10) | `[{ id, citizen: { id, name }, vaccine: { id, name }, dose: { id, doseNumber, doseName }, applicationDate, status }]` |
 | GET | `/dashboard/monthly` | — | `[{ month: "YYYY-MM", total }]`: últimos 12 meses, fuso America/Maceio |
-| GET | `/dashboard/overdue` | `page?` (padrão 1), `limit?` (1 a 100, padrão 20), `search?` (nome) | `{ items, total, page, limit, totalPages, totalPessoas, totalDosesAtrasadas }`, com `items: [{ id, name, cpf, maxDaysOverdue, overdueVaccines: [{ vaccineId, vaccineName, nextDose: { id, doseName }, nextDoseDate, daysOverdue }] }]` |
+| GET | `/dashboard/overdue` | `page?` (padrão 1), `limit?` (1 a 100, padrão 20), `search?` (nome), `status?` (`ATRASADA` ou `AGUARDANDO_CONFERENCIA`, padrão `ATRASADA`) | `{ items, total, page, limit, totalPages, counts, doseCounts }`, com `items: [{ id, name, cpf, maxDaysOverdue, vaccines: [{ vaccineId, vaccineName, nextDose: { id, doseName } \| null, nextDoseDate, daysOverdue, pendingDoses: [{ id, doseName, applicationDate }] }] }]` |
 
-- **`/overdue` (busca ativa de faltosos, D21):** pessoas com ao menos uma vacina `ATRASADA`, pelo mesmo cálculo da caderneta. Ordenado por `maxDaysOverdue` (mais atrasado primeiro; empate por nome). `cpf` vem mascarado. `search` filtra por nome sem diferenciar maiúsculas e acentos. Paginado como as demais listas (D22). `totalPessoas` (igual a `total`) e `totalDosesAtrasadas` consideram todos os resultados do filtro, não só a página; sem `search`, `totalDosesAtrasadas` é igual ao do `/summary`.
-- **Erros:** `400` (`page`, `limit` ou `search` inválido), `401`, `403`.
+- **`/summary`:** `totalDosesAtrasadas` conta as vacinas com dose vencida **sem nenhum registro** (situação `ATRASADA` do D32). `totalDosesAguardandoConferencia` conta as doses informadas pelo cidadão e ainda não confirmadas.
+- **`/overdue` (busca ativa de faltosos, D21, D32):** dois grupos, escolhidos por `status`:
+  - `ATRASADA`: pessoas com ao menos uma dose vencida sem nenhum registro. Ordenado por `maxDaysOverdue` (mais atrasado primeiro; empate por nome). Em cada vacina, `nextDose`, `nextDoseDate` e `daysOverdue` descrevem a dose atrasada; `pendingDoses` lista outras doses da mesma vacina aguardando conferência, se houver.
+  - `AGUARDANDO_CONFERENCIA`: pessoas com doses informadas (`MANUAL`/`OCR_ICR`) e não confirmadas, por nome. `nextDose`, `nextDoseDate`, `daysOverdue` e `maxDaysOverdue` vêm `null` (não há atraso a contar: falta a conferência presencial). As doses ficam em `pendingDoses`, com a data de aplicação informada.
+  - Uma vacina pode aparecer nos dois grupos, com doses diferentes.
+  - `cpf` vem mascarado. `search` filtra por nome sem diferenciar maiúsculas e acentos. Paginado como as demais listas (D22). `counts` (pessoas) e `doseCounts` (doses) trazem os totais dos dois grupos com a busca aplicada, independentemente do `status`. No grupo `ATRASADA`, a dose conta uma por vacina; no `AGUARDANDO_CONFERENCIA`, conta cada dose pendente. Sem `search`, `doseCounts` é igual ao `/summary` (`totalDosesAtrasadas` e `totalDosesAguardandoConferencia`).
+- **Erros:** `400` (`page`, `limit`, `search` ou `status` inválido), `401`, `403`.

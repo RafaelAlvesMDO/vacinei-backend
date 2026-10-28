@@ -124,6 +124,60 @@ export function calculateVaccineStatus({
   };
 }
 
+export interface AlertRecord extends AppliedDoseRecord {
+  status: string;
+}
+
+export interface CalculateAlertStatusInput extends Omit<CalculateVaccineStatusInput, 'records'> {
+  records: AlertRecord[];
+}
+
+export type AlertStatus = 'ATRASADA' | 'AGUARDANDO_CONFERENCIA' | 'EM_DIA' | 'COMPLETA';
+
+export interface PendingDose {
+  id: string;
+  doseNumber: number;
+  doseName: string;
+  applicationDate: Date | null;
+}
+
+export interface AlertStatusResult extends VaccineStatusResult {
+  alertStatus: AlertStatus;
+  pendingDoses: PendingDose[];
+}
+
+/**
+ * Situação do esquema para os alertas (RF007 nota 7, D32). Só a dose CONFIRMADA
+ * encerra a pendência:
+ * - ATRASADA: uma dose venceu e não tem nenhum registro, nem pendente (é o `status`
+ *   do esquema, cuja próxima dose é a seguinte ao último registro).
+ * - AGUARDANDO_CONFERENCIA: sem dose vencida sem registro, mas com doses informadas
+ *   pelo cidadão e não confirmadas (`pendingDoses`). Não conta dias de atraso.
+ * - EM_DIA / COMPLETA: sem pendências, ou seja, considerando só doses confirmadas.
+ * Uma vacina ATRASADA também pode ter `pendingDoses` (doses diferentes da atrasada).
+ * Usado pela caderneta (campo `alert`), pela busca ativa e pelo /summary.
+ */
+export function calculateAlertStatus({ records, ...input }: CalculateAlertStatusInput): AlertStatusResult {
+  const schedule = calculateVaccineStatus({ ...input, records });
+  const pendingByDoseId = new Map(
+    records.filter((record) => record.status !== 'CONFIRMADO').map((record) => [record.doseId, record.applicationDate]),
+  );
+  const pendingDoses = [...input.doses]
+    .filter((dose) => pendingByDoseId.has(dose.id))
+    .sort((a, b) => a.doseNumber - b.doseNumber)
+    .map((dose) => ({
+      id: dose.id,
+      doseNumber: dose.doseNumber,
+      doseName: dose.doseName,
+      applicationDate: pendingByDoseId.get(dose.id) ?? null,
+    }));
+
+  let alertStatus: AlertStatus = schedule.status;
+  if (schedule.status !== 'ATRASADA' && pendingDoses.length > 0) alertStatus = 'AGUARDANDO_CONFERENCIA';
+
+  return { ...schedule, alertStatus, pendingDoses };
+}
+
 export class CalculateVaccineStatusService {
   async execute(citizenId: string, vaccineId: string, referenceDate = new Date()) {
     const [citizen, doses] = await Promise.all([

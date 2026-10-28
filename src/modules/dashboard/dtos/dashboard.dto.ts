@@ -19,6 +19,10 @@ export const overdueQuerySchema = paginationQuerySchema.extend({
     .max(100, 'search deve ter no máximo 100 caracteres')
     .optional()
     .transform((value) => value || undefined),
+  // Grupo da busca ativa (D32): doses atrasadas sem registro ou informadas aguardando conferência
+  status: z
+    .enum(['ATRASADA', 'AGUARDANDO_CONFERENCIA'], 'status deve ser ATRASADA ou AGUARDANDO_CONFERENCIA')
+    .default('ATRASADA'),
 });
 
 export type OverdueQueryDTO = z.infer<typeof overdueQuerySchema>;

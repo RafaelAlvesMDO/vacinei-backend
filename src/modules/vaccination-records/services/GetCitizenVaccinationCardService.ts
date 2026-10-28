@@ -3,7 +3,7 @@ import { prisma } from '../../../config/prisma';
 import { CITIZEN_ROLES } from '../../../utils/citizenRoles';
 import { AppError } from '../../../errors/AppError';
 import { CheckVerifiedProfessionalService } from '../../users/services/CheckVerifiedProfessionalService';
-import { calculateVaccineStatus } from './CalculateVaccineStatusService';
+import { calculateAlertStatus } from './CalculateVaccineStatusService';
 
 interface IRequester {
   id: string;
@@ -85,7 +85,7 @@ export class GetCitizenVaccinationCardService {
     const vaccines = [...byVaccine.values()]
       .map((vaccineRecords) => {
         const { doses, ...vaccine } = vaccineRecords[0].dose.vaccine;
-        const statusResult = calculateVaccineStatus({
+        const { alertStatus, pendingDoses, ...statusResult } = calculateAlertStatus({
           doses,
           records: vaccineRecords,
           birthDate: citizen.birthDate,
@@ -95,6 +95,8 @@ export class GetCitizenVaccinationCardService {
         return {
           vaccine,
           ...statusResult,
+          // Situação para os alertas: só a dose confirmada encerra a pendência (RF007 nota 7, D32)
+          alert: { status: alertStatus, pendingDoses },
           records: vaccineRecords.map(({ doseId: _doseId, dose, ...record }) => ({
             ...record,
             dose: { id: dose.id, doseNumber: dose.doseNumber, doseName: dose.doseName },

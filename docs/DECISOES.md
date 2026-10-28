@@ -99,7 +99,7 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Requisito:** RF001; LGPD.
 
 ### D21 — Lista de doses atrasadas só para profissional verificado (busca ativa)
-- **Decisão:** o `GET /dashboard/overdue` lista as pessoas (CIDADAO e PROFISSIONAL_SAUDE ativos) com vacina `ATRASADA`, com nome, CPF mascarado e as vacinas em atraso. Só o profissional verificado acessa; o `ADMIN` continua apenas com o total agregado do `/summary` (D05). O cálculo é o mesmo do card "Doses atrasadas", para que os números batam.
+- **Decisão:** o `GET /dashboard/overdue` lista as pessoas (CIDADAO e PROFISSIONAL_SAUDE ativos) com vacina `ATRASADA`, com nome, CPF mascarado e as vacinas em atraso, e, em outro grupo, as pessoas com doses aguardando conferência (D32). Só o profissional verificado acessa; o `ADMIN` continua apenas com o total agregado do `/summary` (D05). O cálculo é o mesmo do card "Doses atrasadas", para que os números batam.
 - **Motivo:** finalidade de **busca ativa de faltosos**: o profissional precisa saber quem procurar para completar o esquema vacinal. São dados de saúde identificados, então, pelo princípio da necessidade, ficam restritos a quem presta o atendimento, com CPF mascarado (D14) e paginação limitada (máx. 100).
 - **Requisito:** RF009; RS005; LGPD.
 
@@ -129,6 +129,20 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Melhoria futura:** separar um enum próprio para o status do registro (ex.: `PENDENTE`/`CONFIRMADO`), sem misturar com o status do esquema vacinal. Isso exige migration e ajustes no seed, na caderneta, no dashboard e no confirm.
 - **Motivo:** permitir que o cidadão digitalize o histórico (RF005) sem que um registro não validado ganhe o peso de uma confirmação presencial. Bloquear a alteração após a confirmação preserva a validação por terceiro (RS006). Reaproveitar o enum evita uma migration perto da pré-banca.
 - **Requisito:** RF005, RS003, RS004, RF010.
+
+### D32 — Só a dose confirmada encerra a pendência: atrasada × aguardando conferência
+- **Decisão:** para os alertas e a busca ativa, cada vacina da caderneta fica em uma de três situações (critério estrito do RF007 nota 7: um registro do cidadão não confirmado não conta como dose resolvida):
+  - **`ATRASADA`:** a próxima dose venceu e não existe nenhum registro dela, nem pendente. Mostra os dias em atraso (acima de 1 ano, o app e o web exibem "há mais de 1 ano").
+  - **`AGUARDANDO_CONFERENCIA`:** não há dose vencida sem registro, mas há doses informadas pelo cidadão (`MANUAL`/`OCR_ICR`) e ainda não confirmadas por um profissional. Não conta dias de atraso: é uma pendência, não um atraso.
+  - **`EM_DIA` / `COMPLETA`:** sem pendências, ou seja, considerando só as doses confirmadas.
+  - Uma vacina pode estar `ATRASADA` e ter também doses aguardando conferência (doses diferentes, por exemplo a 1ª informada e a 2ª vencida sem registro).
+- **Onde vale:**
+  - **Alertas do app (RF007):** o alerta continua ativo para as doses aguardando conferência, com a mensagem "Dose informada · leve sua caderneta à UBS para conferência", sem dias de atraso. A notificação consolidada pode citar os dois grupos.
+  - **Busca ativa (`GET /dashboard/overdue`, D21):** dois grupos, `status=ATRASADA` (padrão) e `status=AGUARDANDO_CONFERENCIA`, com os totais de pessoas e doses de cada um. O Gerenciador Web mostra os dois separados.
+  - **Card "Doses atrasadas" (`GET /dashboard/summary`):** conta só as `ATRASADA` (sem registro), para não inflar o número, e traz à parte o total aguardando conferência. Sem busca, os totais do `/overdue` batem com os do card.
+- **Implementação:** a regra fica no backend (D01), em `calculateAlertStatus` (`CalculateVaccineStatusService`), usada pela caderneta (campo `alert`), pelo `/overdue` e pelo `/summary`. O `status` da caderneta continua o do esquema (todo registro conta como aplicado), porque é a base da próxima dose e da data prevista.
+- **Motivo:** o registro do cidadão não pode encerrar o alerta (nota 7), mas tratá-lo como atraso inflaria os números: no seed, 78 doses aguardam conferência e só 18 vacinas estão de fato atrasadas, e as vacinas só com registros pendentes passariam a contar o atraso desde o nascimento. Separar os grupos dá ao profissional duas ações distintas: procurar quem não tomou a dose e conferir quem já informou.
+- **Requisito:** RF007 (nota 7), RF009, RF010; D06, D21.
 
 ## Catálogo
 
@@ -174,7 +188,16 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 ### D24 — Notificações locais como base; Expo Push como complemento
 - **Decisão:** os alertas de vacinação são notificações locais agendadas no aparelho (`expo-notifications`), calculadas a partir da caderneta. O Expo Push entra só como complemento (avisos enviados pelo servidor) e exige development build. O FCM direto deixa de ser o plano.
 - **Motivo:** notificações locais não têm custo, não dependem de backend novo e funcionam no Expo Go, usado nos testes. O Expo Go não recebe push remoto no Android.
+- **Limitação:** as notificações locais refletem a caderneta da última vez que o app foi aberto (ou atualizado). Uma dose confirmada depois disso só sai dos alertas quando o app abrir de novo, e o agendamento cobre um horizonte limitado de dias.
+- **Melhorias futuras:** Expo Push como complemento (avisos do servidor, `POST/DELETE /devices`) e envio diário por e-mail pelo backend (rotina agendada), porque os dois funcionam mesmo com o app fechado e usam a caderneta atual.
+- **Atualização (2026-10-28): notificações do sistema adiadas para a etapa final.** No Expo Go do Android (SDK 58), criar o canal de notificações falhava (NullPointerException no módulo nativo) e tocar na notificação fechava o app, sem erro no JavaScript. Para não deixar funcionalidade com erro no projeto, o `expo-notifications` foi retirado do app, com o agendamento, o pedido de permissão e as preferências no Perfil. Por agora, os alertas do RF007 ficam **dentro do app**: Central de notificações, avisos na Início e na Caderneta, com a regra do D32. Na etapa final, as notificações locais serão validadas num APK (EAS Build); se não funcionarem, entra o envio diário por e-mail pelo backend, sugerido pelo orientador. O código completo está no commit `840e50d` do repositório do front-end.
 - **Requisito:** RF007.
+
+### D31 — Lembrete antecipado da próxima dose (ampliação do RF007)
+- **Decisão:** além do alerta de atraso, o app avisa **7 dias antes** e **no dia** da data prevista da próxima dose. Os lembretes entram na mesma notificação consolidada do dia (uma por dia, com todas as vacinas) e podem ser desligados no Perfil separadamente dos alertas de atraso.
+- **Situação atual (2026-10-28):** com as notificações do sistema adiadas para a etapa final (D24), o lembrete aparece **dentro do app**: a Central de notificações mostra a dose prevista para hoje e as previstas para os próximos 7 dias. A notificação consolidada e os interruptores no Perfil voltam na etapa final (no APK ou como parte do e-mail diário).
+- **Motivo:** sugestão dos professores: evitar o atraso, e não só avisar depois dele.
+- **Requisito:** RF007 (ampliação); D24.
 
 ### D25 — OCR como microsserviço Python chamado pelo backend
 - **Decisão:** o OCR da caderneta física roda em um microsserviço Python separado (OpenCV no pré-processamento + `pytesseract`). O app envia a foto ao backend, que chama o serviço e devolve as doses reconhecidas para revisão. Os registros são gravados com origem `OCR_ICR` e ficam pendentes de confirmação (D06). Se o OCR falhar, o app oferece o cadastro manual.
