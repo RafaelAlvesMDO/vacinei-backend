@@ -190,10 +190,12 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** notificações locais não têm custo, não dependem de backend novo e funcionam no Expo Go, usado nos testes. O Expo Go não recebe push remoto no Android.
 - **Limitação:** as notificações locais refletem a caderneta da última vez que o app foi aberto (ou atualizado). Uma dose confirmada depois disso só sai dos alertas quando o app abrir de novo, e o agendamento cobre um horizonte limitado de dias.
 - **Melhorias futuras:** Expo Push como complemento (avisos do servidor, `POST/DELETE /devices`) e envio diário por e-mail pelo backend (rotina agendada), porque os dois funcionam mesmo com o app fechado e usam a caderneta atual.
+- **Atualização (2026-10-28): notificações do sistema adiadas para a etapa final.** No Expo Go do Android (SDK 58), criar o canal de notificações falhava (NullPointerException no módulo nativo) e tocar na notificação fechava o app, sem erro no JavaScript. Para não deixar funcionalidade com erro no projeto, o `expo-notifications` foi retirado do app, com o agendamento, o pedido de permissão e as preferências no Perfil. Por agora, os alertas do RF007 ficam **dentro do app**: Central de notificações, avisos na Início e na Caderneta, com a regra do D32. Na etapa final, as notificações locais serão validadas num APK (EAS Build); se não funcionarem, entra o envio diário por e-mail pelo backend, sugerido pelo orientador. O código completo está no commit `840e50d` do repositório do front-end.
 - **Requisito:** RF007.
 
 ### D31 — Lembrete antecipado da próxima dose (ampliação do RF007)
 - **Decisão:** além do alerta de atraso, o app avisa **7 dias antes** e **no dia** da data prevista da próxima dose. Os lembretes entram na mesma notificação consolidada do dia (uma por dia, com todas as vacinas) e podem ser desligados no Perfil separadamente dos alertas de atraso.
+- **Situação atual (2026-10-28):** com as notificações do sistema adiadas para a etapa final (D24), o lembrete aparece **dentro do app**: a Central de notificações mostra a dose prevista para hoje e as previstas para os próximos 7 dias. A notificação consolidada e os interruptores no Perfil voltam na etapa final (no APK ou como parte do e-mail diário).
 - **Motivo:** sugestão dos professores: evitar o atraso, e não só avisar depois dele.
 - **Requisito:** RF007 (ampliação); D24.
 
