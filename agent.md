@@ -91,7 +91,7 @@ src/
 - **Recuperação de Senha (RF011 / RS007):** Código de 6 dígitos expira em 10 min. Máximo de 3 tentativas erradas bloqueia novas requisições por 15 minutos.
 
 ### 4.3. Caderneta, Vacinas e Motor de Regras
-- **Vínculo Único de Dependentes (RS008):** Impedir cadastro de dependente com mesmo `Nome Completo` e `Data de Nascimento` já cadastrado por outro responsável.
+- **Vínculo Único de Dependentes (RS008):** Impedir dependente duplicado: mesmo CPF em qualquer cadastro, ou mesmo `Nome Completo` e `Data de Nascimento` para o mesmo responsável (D33).
 - **Consistência Vacinal (RS003):** Bloquear datas de aplicação futuras e validar nomes de vacinas contra a base do Calendário Nacional.
 - **Cálculo de Status da Vacina (RF006 / RF007):**
   - `EM_DIA`: Doses tomadas ou dentro do prazo.

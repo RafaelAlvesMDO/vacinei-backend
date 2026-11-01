@@ -13,7 +13,8 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
   - **CRUD de Contas/Usuários (`src/modules/users`):** Cadastro público (Cidadão e Profissional de Saúde com validação de conselho), consulta de perfil (`/users/me`), busca por ID, listagem paginada (ADMIN), atualização e desativação lógica.
   - **CRUD de Vacinas (`src/modules/vaccines`):** Listagem com busca textual e público-alvo, detalhes por ID com doses ordenadas, criação, atualização e desativação segura protegidas por RBAC.
   - **CRUD de Unidades Básicas de Saúde (`src/modules/ubs`):** Listagem com cálculo geográfico de proximidade por coordenadas (Haversine validado com 36 UBSs), filtro por raio (km), busca por texto/bairro/cidade, detalhes por ID e gestão de UBSs.
-  - **Caderneta e Confirmação Presencial (`src/modules/vaccination-records`):** cálculo de status por vacina (`EM_DIA`/`ATRASADA`/`COMPLETA`), confirmação de dose por profissional verificado (RF010/RS006), caderneta do cidadão (RF006) e busca de cidadão sem acentos (`/citizens`) e cadastro manual pelo titular (RF005/RS003/RS004, D30), editável e excluível até a confirmação. Registros vinculados só ao próprio cidadão (`dependentId = null`); dependentes ficam para a etapa 7.
+  - **Caderneta e Confirmação Presencial (`src/modules/vaccination-records`):** cálculo de status por vacina (`EM_DIA`/`ATRASADA`/`COMPLETA`), confirmação de dose por profissional verificado (RF010/RS006), caderneta do cidadão (RF006) e busca de cidadão sem acentos (`/citizens`) e cadastro manual pelo titular (RF005/RS003/RS004, D30), editável e excluível até a confirmação.
+  - **Dependentes (`src/modules/dependents`, etapa 7, RF012/RS004/RS008, D33, 2026-11-01):** dependente é um `User` `CIDADAO` sem e-mail/senha ligado ao responsável (`responsibleId`, `onDelete: Restrict`), com `sex` e `relationship` opcionais. CRUD em `/dependents` e caderneta/registro manual em `/dependents/:id/vaccination-records` reaproveitando os serviços do titular. Menor de 18 no cadastro (exceto `CURATELADO`), 409 por CPF ou nome+nascimento no mesmo responsável, remoção só sem dose confirmada. Busca de cidadãos, confirmação, `/overdue`, `/recent-doses` e métricas incluem dependentes com o nome do responsável; RS006 bloqueia os dependentes do próprio profissional.
   - **Dashboard do Profissional (`src/modules/dashboard`, RF009/RS005):** resumo (cadernetas, vacinas registradas, doses atrasadas), últimas doses e série mensal de 12 meses, restritos a profissional verificado.
   - **Verificação de Profissionais (`src/modules/professionals`, RS001):** listagem por status, aprovação e recusa manual pelo ADMIN, com auditoria de quem decidiu e quando.
   - **Contrato da API:** `docs/API.md` com todos os endpoints, perfis de acesso, bodies, respostas, erros e logins do seed.
@@ -68,7 +69,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
    - `VaccinationRecord.confirmedAt` (migration `20261010232527_add_confirmed_at_to_vaccination_record`) guarda a data da confirmação presencial. Confirmar um registro manual/OCR mantém a `applicationDate` original (se nula, recebe a data da confirmação); registros criados pelo profissional têm `applicationDate = confirmedAt = agora`.
    - O resumo do dashboard calcula os atrasos em lote com a função pura `calculateVaccineStatus` (uma query, em vez de chamar o service por par cidadão/vacina). `totalDosesAtrasadas` = pares cidadão/vacina com status `ATRASADA`.
    - A série mensal agrupa pela `applicationDate` no fuso `America/Maceio` via `generate_series` (meses sem registro retornam 0).
-   - **Pendência:** as métricas do dashboard consideram só cidadãos ativos (`dependentId = null`). Os registros de dependentes devem entrar nas métricas quando o RF012 for implementado.
+   - As métricas do dashboard incluem os dependentes desde a etapa 7 (D33).
 
 9. **Senha Forte, Cadastro de ADMIN e Verificação de Profissionais (2026-10-10):**
    - Regra de senha do RF001 (mín. 8, maiúscula, minúscula, número e símbolo) centralizada em `src/utils/passwordSchema.ts`, aplicada em `POST /users` e `POST /auth/reset-password`. O login segue aceitando qualquer senha não vazia (contas antigas).
@@ -78,6 +79,13 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
    - `ProfessionalRegistry` ganhou `verifiedById`, `rejectedAt`, `rejectedById` e `rejectionReason` (migration `20261010234205_add_verification_audit_to_professional_registry`).
    - **Recusa mantém a conta ativa e não verificada:** o `ensureVerifiedProfessional` já bloqueia as ações clínicas e o profissional pode ser verificado depois. Recusar um profissional já verificado revoga a verificação. Bloqueio total fica a cargo de `DELETE /users/:id`.
 
+10. **Dependentes como usuários sem credenciais (2026-11-01, D33):**
+   - Migration `20261101201307_dependentes_como_usuarios`: `User.email`/`passwordHash` opcionais, `responsibleId` (autorrelação `UserDependents`, Restrict), enums `Sex` e `DependentRelationship`; removidos o model `Dependent` e `vaccination_records.dependent_id` (só tinham dados do seed).
+   - Acesso centralizado: `findOwnDependent` (404 se não for dependente do usuário) e `ensureCanManageCard` nos serviços de registro manual, que recebem `subjectId` opcional; `GetCitizenVaccinationCardService` aceita titular, responsável ou profissional verificado.
+   - `/users` (admin) ignora dependentes (`responsibleId: null`).
+   - `prisma migrate dev` recusa rodar em terminal não interativo quando há aviso de perda de dados; nesta etapa a tabela `dependents` (só seed) foi esvaziada antes para a migration rodar sem prompt.
+   - Seed: `cidadao02` (João Pedro) passou de bebê para adulto para ser responsável; dependentes para cidadao01 (3), cidadao02 (2) e Carlos (2).
+
 ---
 
 ## 3. Entidades Modeladas no Prisma (`prisma/schema.prisma`)
@@ -86,7 +94,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - `ProfessionalRegistry`: Dados do conselho de classe (CRM, COREN, etc.) vinculados 1:1 ao profissional de saúde.
 - `RefreshToken`: Tokens de atualização para ciclo de autenticação seguro.
 - `PasswordResetCode`: Códigos de redefinição de senha (hash) com controle de expiração, tentativas e bloqueio (`blockedUntil`, migration `20261010220933_add_blocked_until_to_password_reset_code`).
-- `Dependent`: Dependentes vinculados a um responsável, com unicidade `[name, birthDate]` (RS008).
+- Dependentes (D33): registros de `User` com `responsibleId`, sem e-mail/senha, com `sex` e `relationship`. Unicidade (RS008) validada no service.
 - `Vaccine` e `Dose`: Catálogo do Calendário Nacional de Vacinação (doenças-alvo, faixas etárias e intervalos).
 - `VaccinationRecord`: Histórico e caderneta de vacinas do cidadão/dependente, rastreabilidade do profissional aplicador (`appliedById` - RS006/RF010), UBS de aplicação e status vacinal.
 - `Ubs`: Unidades Básicas de Saúde com coordenadas geográficas (latitude/longitude) e CNES.
@@ -133,7 +141,11 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 - `PUT` / `DELETE /vaccination-records/:id`: Edição/exclusão pelo titular só enquanto não `CONFIRMADO` (403 se confirmado ou de terceiro).
 - `POST /vaccination-records/confirm`: Confirmação presencial de dose (profissional verificado). `confirmedAt` = agora, profissional = sessão; registro existente mantém a `applicationDate` original. Cria registro `SISTEMA_PRESENCIAL`/`CONFIRMADO` ou promove registro manual/OCR existente a `CONFIRMADO` (RF007 nota 7); 409 se já confirmado.
 - `GET /citizens?search=`: Busca de cidadão por CPF exato (termo com 11 dígitos, com ou sem máscara) ou por nome via `unaccent` + `ILIKE` (profissional verificado), CPF mascarado, até 20 resultados.
-- `GET /citizens/:id/vaccination-records`: Caderneta agrupada por vacina com status calculado (titular ou profissional verificado).
+- `GET /citizens/:id/vaccination-records`: Caderneta agrupada por vacina com status calculado (titular, responsável ou profissional verificado).
+
+### 4.5.1. Dependentes (`/dependents`, CIDADAO/PROFISSIONAL_SAUDE)
+- `GET` / `POST /dependents`, `GET` / `PUT` / `DELETE /dependents/:id`: CRUD dos dependentes do usuário logado (D33).
+- `GET` / `POST /dependents/:id/vaccination-records`, `PUT` / `DELETE /dependents/:id/vaccination-records/:recordId`: caderneta e registro manual do dependente, mesmas regras do titular.
 
 ### 4.6. Dashboard do Profissional (`/dashboard`, profissional verificado)
 - `GET /dashboard/summary`: `totalCadernetas`, `totalVacinasRegistradas` e `totalDosesAtrasadas`.
@@ -158,8 +170,8 @@ Contrato completo de todos os endpoints: `docs/API.md`.
 - [x] **CRUD de Contas/Utilizadores:** Cadastro público, autenticação, perfis e gerenciamento.
 - [x] **CRUD de Vacinas:** Consulta do catálogo SUS com doses e gestão restrita a ADMIN (RF008).
 - [x] **CRUD de Unidades Básicas de Saúde (UBSs):** Consulta, cadastro e cálculo geográfico por proximidade.
-- [ ] **Módulo de Dependentes (`src/modules/dependents`):** Cadastro e listagem de dependentes (filhos/tutelados) vinculados ao responsável (RS008).
+- [x] **Módulo de Dependentes (`src/modules/dependents`):** CRUD, caderneta e registro manual do dependente pelo responsável (RF012/RS004/RS008, D33). Futuro: dependente assumir a própria conta, transferência aos 18 anos, mais de um responsável.
 - [x] **Módulo de Caderneta e Registro de Aplicações (`src/modules/vaccination-records`):** Registro de aplicação presencial por profissional (RS006/RF010) e cálculo dos status da caderneta (`EM_DIA`, `ATRASADA`, `COMPLETA`).
-- [x] **Dashboard do Profissional (`src/modules/dashboard`):** Indicadores, últimas doses e série mensal (RF009/RS005). Dependentes entram com o RF012.
+- [x] **Dashboard do Profissional (`src/modules/dashboard`):** Indicadores, últimas doses e série mensal (RF009/RS005), incluindo dependentes (D33).
 - [x] **Verificação de Profissionais (`src/modules/professionals`):** Aprovação/recusa manual pelo ADMIN (RS001).
 - [ ] **Coleção de Requisições / Documentação de Teste:** Contrato pronto em `docs/API.md`; falta a coleção Insomnia/Postman/cURL para demonstrar na banca.
