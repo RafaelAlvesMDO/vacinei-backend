@@ -5,3 +5,13 @@ node_modules
 dist
 
 /src/generated/prisma
+
+# OCR: amostras e saídas nunca vão para o Git
+ocr-service/amostras/
+ocr-service/saida/
+ocr-service/**/*.jpg
+ocr-service/**/*.jpeg
+ocr-service/**/*.png
+ocr-service/**/*.webp
+ocr-service/**/*.heic
+__pycache__/

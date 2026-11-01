@@ -1,0 +1,8 @@
+amostras/
+saida/
+__pycache__/
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.heic

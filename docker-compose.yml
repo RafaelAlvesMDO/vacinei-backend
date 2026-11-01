@@ -14,5 +14,13 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  # Prova de conceito do OCR (D25). Só sobe com: docker compose --profile ocr run --rm ocr
+  ocr:
+    build: ./ocr-service
+    profiles: ["ocr"]
+    volumes:
+      - ${OCR_SAMPLES_DIR:-./ocr-service/amostras}:/amostras:ro
+      - ${OCR_OUTPUT_DIR:-./ocr-service/saida}:/saida
+
 volumes:
   pgdata:
