@@ -38,8 +38,20 @@ docker compose --profile ocr run --rm ocr python poc_ocr.py --entrada /amostras 
    - **Data:** `dd/mm/aa` ou `dd/mm/aaaa`, tolerando confusões como `O`→`0` e `l`→`1`. Datas precedidas de "Fab"/"Val" perdem prioridade.
    - **Lote:** token alfanumérico depois do rótulo "Lote". Se não houver rótulo, usa um token misto de letras e dígitos.
    - **Vacina:** comparação aproximada (rapidfuzz) com `catalogo_vacinas.json`, que é uma cópia dos nomes do seed com siglas como `SCR`, `VIP` e `VRH`. Vacinas conhecidas que não estão no catálogo (ex.: `ACWY`) são identificadas e marcadas como **fora do catálogo**.
-4. **Relatórios:**
-   - `resumo.md`: desempenho por variante e por imagem.
+4. **Leitura por campo com âncoras** (`ocr_formulario.py`), que é a técnica de OCR de formulários:
+   - **Blocos:** detecta os cartões (retângulos claros sobre o fundo escuro) e descarta os vazios. O critério é a densidade de tinta fora dos rótulos e das linhas impressas: abaixo de 2% o bloco é vazio.
+   - **Âncoras:** localiza os rótulos impressos (`VACINA`, `FAB`, `LOTE`, `CÓD`, `VACINADOR`) com o Tesseract (psm 11) e ajusta a eles um modelo do cartão. Esse modelo dá a posição relativa de cada rótulo e linha, e estima os rótulos que o Tesseract não achou.
+   - **Recorte:** cada campo é a faixa entre a linha do campo anterior e a do próprio campo, na largura total do bloco, porque a escrita costuma subir e invadir o rótulo. A ordem é:
+     - vacina: abaixo de `VACINA`;
+     - data: faixa seguinte, sem rótulo;
+     - fab, lote e cód: nas linhas dos rótulos;
+     - vacinador.
+   - **Limpeza:** apaga os rótulos, remove as linhas horizontais (morfologia) e descarta a borda do cartão e as pontas de escrita dos campos vizinhos.
+   - **Leitura:** amplia 2,5x, binariza (Otsu e adaptativa) e lê com psm 7 e 8. A data usa whitelist `0123456789/` e o lote, maiúsculas e dígitos. Para a vacina, faz o match aproximado com o catálogo.
+   - **Saída:** `07_blocos_e_ancoras.png` mostra blocos, rótulos (azul: lido; roxo: estimado) e faixas. Os recortes brutos e limpos de cada campo ficam em `campos/`.
+   - **Modelo do cartão:** as posições foram medidas em um único modelo de caderneta. Outro layout exige medir de novo `MODELO_*` em `ocr_formulario.py`.
+5. **Relatórios:**
+   - `resumo.md`: desempenho por variante e por imagem, com a página inteira e as âncoras lado a lado.
    - `resultados.json`
    - Uma pasta por imagem com:
      - as etapas (`01_original` … `05b_binaria_adaptativa`);

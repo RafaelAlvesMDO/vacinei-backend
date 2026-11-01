@@ -22,6 +22,9 @@ from pytesseract import Output
 from rapidfuzz import fuzz
 from rapidfuzz.distance import Levenshtein
 
+from ocr_formulario import CAMPOS as CAMPOS_FORMULARIO
+from ocr_formulario import ler_formulario
+
 EXTENSOES = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
 CAMPOS_AVALIADOS = ("vacina", "data", "lote")
 LADO_MAXIMO = 2500
@@ -254,24 +257,30 @@ RE_ROTULO_LOTE = re.compile(r"\b(?:L[O0]TE|LT)\b\.?:?", re.IGNORECASE)
 RE_TOKEN = re.compile(r"[A-Za-z0-9][A-Za-z0-9\-/.]*")
 
 
+def montar_data(d, mes, a):
+    """Valida dia, mês e ano (2 ou 4 dígitos) e devolve dd/mm/aaaa, ou None."""
+    if not (d.isdigit() and mes.isdigit() and a.isdigit()) or len(a) not in (2, 4):
+        return None
+    dia, mes_i, ano = int(d), int(mes), int(a)
+    if len(a) == 2:
+        ano += 2000 if ano <= datetime.now().year % 100 + 1 else 1900
+    if not (1 <= dia <= 31 and 1 <= mes_i <= 12 and 1950 <= ano <= 2035):
+        return None
+    return f"{dia:02d}/{mes_i:02d}/{ano}"
+
+
 def extrair_datas(texto):
     candidatos = []
-    ano_atual = datetime.now().year % 100
     for m in RE_DATA.finditer(texto):
         bruto = m.group(0)
         if sum(ch.isdigit() for ch in bruto) < 4:
             continue
-        d, mes, a = (g.translate(CONFUSAO_DIGITOS) for g in m.groups())
-        if not (d.isdigit() and mes.isdigit() and a.isdigit()):
-            continue
-        dia, mes_i, ano = int(d), int(mes), int(a)
-        if len(a) == 2:
-            ano += 2000 if ano <= ano_atual + 1 else 1900
-        if not (1 <= dia <= 31 and 1 <= mes_i <= 12 and 1950 <= ano <= 2035):
+        valor = montar_data(*(g.translate(CONFUSAO_DIGITOS) for g in m.groups()))
+        if not valor:
             continue
         antes = normalizar(texto[max(0, m.start() - 14):m.start()])
         candidatos.append({
-            "valor": f"{dia:02d}/{mes_i:02d}/{ano}",
+            "valor": valor,
             "lido": bruto,
             "ini": m.start(), "fim": m.end(),
             "rotulo_fab_val": bool(re.search(r"\b(FAB|VAL|VENC|VALIDADE)\b", antes)),
@@ -335,6 +344,59 @@ def extrair_campos(leitura, catalogo: Catalogo, catalogo_tokens):
         campos["vacina"] = {"valor": vac["nome"], "lido": trecho, "no_catalogo": vac["no_catalogo"],
                             "similaridade": vac["similaridade"], "conf": conf}
     return campos
+
+
+def interpretar_data_campo(texto):
+    """Data lida sozinha no recorte: aceita barras, espaços ou só dígitos (barra lida como 1 ou 7)."""
+    datas = extrair_datas(texto)
+    if datas:
+        return datas[0]["valor"]
+    dig = re.sub(r"\D", "", texto.translate(CONFUSAO_DIGITOS))
+    candidatos = [dig] if len(dig) in (6, 8) else []
+    if len(dig) in (8, 10) and dig[2] in "17" and dig[5] in "17":
+        candidatos.append(dig[:2] + dig[3:5] + dig[6:])
+    for s in candidatos:
+        valor = montar_data(s[:2], s[2:4], s[4:])
+        if valor:
+            return valor
+    return None
+
+
+def interpretar_leitura(campo, texto, catalogo: Catalogo):
+    """Devolve (valor, válido, extras) para a leitura de um campo isolado."""
+    if campo == "data":
+        valor = interpretar_data_campo(texto)
+        return valor, valor is not None, {}
+    if campo == "lote":
+        valor = normalizar_lote(texto)
+        return valor, len(valor) >= 4 and any(ch.isdigit() for ch in valor), {}
+    if campo == "vacina":
+        vac = catalogo.identificar(texto)
+        if not vac:
+            return normalizar(texto), False, {}
+        return vac["nome"], True, {"no_catalogo": vac["no_catalogo"], "similaridade": vac["similaridade"]}
+    valor = texto.strip()
+    return valor, bool(valor), {}
+
+
+def interpretar_formulario(blocos, catalogo: Catalogo):
+    """Escolhe, para cada campo, a leitura válida de maior confiança entre binarizações e psm."""
+    for b in blocos:
+        if not b["com_escrita"]:
+            continue
+        escolhidos = {}
+        for campo, info in b["campos"].items():
+            for lt in info["leituras"]:
+                lt["valor"], lt["valido"], lt["extras"] = interpretar_leitura(campo, lt["texto"], catalogo)
+            if not info["leituras"]:
+                continue
+            melhor = max(info["leituras"], key=lambda lt: (lt["valido"], lt["conf"] or 0))
+            info["escolhida"] = f"{melhor['binarizacao']}_psm{melhor['psm']}"
+            if melhor["valido"]:
+                escolhidos[campo] = {"valor": melhor["valor"], "lido": melhor["texto"], "conf": melhor["conf"],
+                                     "metodo": f"âncoras ({info['escolhida']})", **melhor["extras"]}
+        b["campos_extraidos"] = escolhidos
+    return blocos
 
 
 # ---------------------------------------------------------------------------
@@ -511,7 +573,57 @@ def fmt(v):
     return "—" if v is None or v == "" else str(v)
 
 
-def relatorio_imagem(nome, info, variantes, melhor, gabarito):
+def relatorio_formulario(blocos, ancoras, gabarito):
+    l = ["## Leitura por campo (âncoras)", "",
+         "Blocos detectados no `07_blocos_e_ancoras.png` (verde: com escrita, cinza: vazio; rótulos em azul "
+         "quando lidos pelo Tesseract e em roxo quando estimados pelo modelo do cartão). Recortes em `campos/`.", "",
+         "| Bloco | Posição | Densidade de tinta | Rótulos lidos | Situação |", "|---|---|---|---|---|"]
+    for b in blocos:
+        x, y, w, h = b["caixa"]
+        lidos = [r for r, a in b["rotulos"].items() if not a["estimado"]]
+        l.append(f"| {b['indice']} | x={x}, y={y}, {w}x{h} | {b['densidade_tinta']} "
+                 f"| {', '.join(lidos) or '—'} | {'com escrita' if b['com_escrita'] else 'vazio (descartado)'} |")
+    l.append("")
+    escritos = [b for b in blocos if b["com_escrita"]]
+    if not escritos:
+        return l + ["Nenhum bloco com escrita.", ""]
+
+    for b in escritos:
+        avaliado = ancoras and ancoras["bloco"] == b["indice"]
+        l += [f"### Bloco {b['indice']}" + (" (comparado com o gabarito)" if avaliado and gabarito else ""), "",
+              "| Campo | Leituras (binarização/psm: texto [conf]) | Valor escolhido | Conf. | Esperado | Resultado |",
+              "|---|---|---|---|---|---|"]
+        aval = (ancoras["avaliacao"] or {}) if avaliado else {}
+        for campo in CAMPOS_FORMULARIO:
+            info = b["campos"][campo]
+            if info["vazio"]:
+                leituras = "_recorte vazio_"
+            else:
+                leituras = "<br>".join(
+                    f"{lt['binarizacao']}/psm{lt['psm']}: `{lt['texto'] or '∅'}` [{fmt(lt['conf'])}]"
+                    + ("" if lt["valido"] else " ✗") for lt in info["leituras"])
+            c = b["campos_extraidos"].get(campo)
+            valor = "—" if not c else c["valor"]
+            if c and campo == "vacina" and not c.get("no_catalogo", True):
+                valor += " ⚠️ fora do catálogo"
+            esperado, resultado = "—", "—"
+            if campo in aval:
+                r = aval[campo]
+                esperado, resultado = r["esperado"], ICONE[r["status"]]
+                if "parte_legivel" in r:
+                    resultado += f" (`{r['parte_legivel']}` {'confere' if r['parte_legivel_confere'] else 'não confere'})"
+            elif avaliado and gabarito and campo in gabarito:
+                esperado, resultado = fmt(gabarito[campo]["valor"]), "informativo"
+            l.append(f"| {campo} | {leituras} | {valor} | {fmt(c['conf'] if c else None)} | {esperado} | {resultado} |")
+        if avaliado and ancoras["placar"]:
+            p = ancoras["placar"]
+            l += ["", f"Placar das âncoras: **{p['acertos']}/{p['contaveis']}** campos legíveis; "
+                      f"parte legível dos incertos: {p['legivel_confere']}/{p['legivel_total']}."]
+        l.append("")
+    return l
+
+
+def relatorio_imagem(nome, info, variantes, melhor, gabarito, blocos, ancoras):
     l = [f"# Relatório OCR — {nome}", ""]
     l += ["## Pré-processamento", "",
           f"- Tamanho processado: {info['tamanho_processado']} (fator de escala {info['fator_escala']})",
@@ -572,7 +684,9 @@ def relatorio_imagem(nome, info, variantes, melhor, gabarito):
     else:
         l += ["## Comparação com o gabarito", "", "Sem gabarito para esta imagem.", ""]
 
-    l += ["## Texto bruto por variante", ""]
+    l += relatorio_formulario(blocos, ancoras, gabarito)
+
+    l += ["## Texto bruto por variante (leitura da página inteira)", ""]
     for v in variantes:
         l += [f"### `{v['id']}`", "", "```", v["leitura"]["texto"] or "(vazio)", "```", ""]
     return "\n".join(l)
@@ -645,11 +759,28 @@ def main():
         melhor = max(variantes, key=lambda v: v["score"])
         desenhar_caixas(etapas[melhor["imagem"]], melhor["leitura"]["palavras"],
                         pasta / "06_caixas_melhor_variante.png")
+
+        blocos = interpretar_formulario(ler_formulario(etapas["sem_ruido"], pasta), catalogo)
+        escritos = [b for b in blocos if b["com_escrita"]]
+        # O gabarito descreve uma dose: compara com o primeiro bloco escrito (ordem de leitura)
+        ancoras = None
+        if escritos:
+            campos_anc = escritos[0]["campos_extraidos"]
+            aval_anc = avaliar(campos_anc, gabarito, catalogo)
+            confs = [c["conf"] for c in campos_anc.values() if c.get("conf") is not None]
+            ancoras = {"bloco": escritos[0]["indice"], "campos": campos_anc, "avaliacao": aval_anc,
+                       "placar": placar(aval_anc),
+                       "conf_media": round(statistics.mean(confs), 1) if confs else 0.0}
+        print(f"  âncoras: {len(blocos)} bloco(s), {len(escritos)} com escrita"
+              + (f", campos {len(ancoras['campos'])}" if ancoras else ""))
+
         (pasta / "relatorio.md").write_text(
-            relatorio_imagem(caminho.name, info, variantes, melhor, gabarito), encoding="utf-8")
+            relatorio_imagem(caminho.name, info, variantes, melhor, gabarito, blocos, ancoras),
+            encoding="utf-8")
 
         resultados.append({
             "imagem": caminho.name, "preprocessamento": info, "tem_gabarito": bool(gabarito),
+            "blocos": blocos, "ancoras": ancoras,
             "melhor_variante": melhor["id"],
             "variantes": [{
                 "id": v["id"], "conf_media": v["leitura"]["conf_media"], "score": v["score"],
@@ -688,8 +819,19 @@ def escrever_resumo(saida, resultados, arq_gab, gabaritos, ignoradas, total_imag
                 agg["contaveis"] += v["placar"]["contaveis"]
                 agg["leg"] += v["placar"]["legivel_confere"]
                 agg["leg_tot"] += v["placar"]["legivel_total"]
+        anc = r.get("ancoras")
+        if anc:
+            agg = por_variante.setdefault("ancoras_por_campo", {"acertos": 0, "contaveis": 0, "leg": 0,
+                                                                "leg_tot": 0, "conf": [], "melhor": 0})
+            agg["conf"].append(anc["conf_media"])
+            if anc["placar"]:
+                agg["acertos"] += anc["placar"]["acertos"]
+                agg["contaveis"] += anc["placar"]["contaveis"]
+                agg["leg"] += anc["placar"]["legivel_confere"]
+                agg["leg_tot"] += anc["placar"]["legivel_total"]
 
     l += ["## Desempenho por variante (todas as imagens)", "",
+          "`ancoras_por_campo` é a leitura campo a campo pelos rótulos; as demais leem a página inteira.", "",
           "| Variante | Conf. média | Acertos (campos legíveis) | Parte legível dos incertos | Vezes escolhida |",
           "|---|---|---|---|---|"]
     for vid, a in sorted(por_variante.items(),
@@ -699,24 +841,28 @@ def escrever_resumo(saida, resultados, arq_gab, gabaritos, ignoradas, total_imag
         l.append(f"| `{vid}` | {round(statistics.mean(a['conf']), 1)} | {acertos} | {leg} | {a['melhor']} |")
     l.append("")
 
-    l += ["## Por imagem (melhor variante pelo score sem gabarito)", "",
-          "| Imagem | Variante | Data | Lote | Vacina | Placar |", "|---|---|---|---|---|---|"]
+    l += ["## Por imagem: página inteira (melhor variante sem gabarito) × âncoras", "",
+          "| Imagem | Abordagem | Data | Lote | Vacina | Placar |", "|---|---|---|---|---|---|"]
+
+    def linha(imagem, abordagem, c, p):
+        vac = c.get("vacina")
+        vac_txt = "—" if not vac else vac["valor"] + ("" if vac.get("no_catalogo", True) else " ⚠️ fora do catálogo")
+        data = c["data"]["valor"] if "data" in c else "—"
+        lote = c["lote"]["valor"] if "lote" in c else "—"
+        placar_txt = f"{p['acertos']}/{p['contaveis']}" if p else "sem gabarito"
+        return f"| {imagem} | {abordagem} | {data} | {lote} | {vac_txt} | {placar_txt} |"
+
     for r in resultados:
         if "erro" in r:
             l.append(f"| {r['imagem']} | erro: {r['erro']} | | | | |")
             continue
         v = next(x for x in r["variantes"] if x["id"] == r["melhor_variante"])
-        c = v["campos"]
-        vac = c.get("vacina")
-        vac_txt = "—" if not vac else vac["valor"] + ("" if vac["no_catalogo"] else " ⚠️ fora do catálogo")
-        cel = []
-        for campo in CAMPOS_AVALIADOS:
-            if campo == "vacina":
-                continue
-            cel.append(c[campo]["valor"] if campo in c else "—")
-        p = v["placar"]
-        placar_txt = f"{p['acertos']}/{p['contaveis']}" if p else "sem gabarito"
-        l.append(f"| {r['imagem']} | `{v['id']}` | {cel[0]} | {cel[1]} | {vac_txt} | {placar_txt} |")
+        l.append(linha(r["imagem"], f"`{v['id']}`", v["campos"], v["placar"]))
+        anc = r.get("ancoras")
+        if anc:
+            l.append(linha(r["imagem"], f"âncoras (bloco {anc['bloco']})", anc["campos"], anc["placar"]))
+        else:
+            l.append(f"| {r['imagem']} | âncoras | nenhum bloco com escrita | | | |")
     l.append("")
     l.append("Detalhes, texto bruto e imagens intermediárias em `<nome-da-imagem>/relatorio.md`.")
     (saida / "resumo.md").write_text("\n".join(l), encoding="utf-8")

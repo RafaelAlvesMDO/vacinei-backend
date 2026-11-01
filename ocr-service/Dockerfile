@@ -10,7 +10,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY poc_ocr.py catalogo_vacinas.json ./
+COPY poc_ocr.py ocr_formulario.py catalogo_vacinas.json ./
 
 ENV PYTHONUNBUFFERED=1
 
