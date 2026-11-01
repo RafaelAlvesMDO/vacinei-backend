@@ -18,7 +18,8 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
   - **Verificação de Profissionais (`src/modules/professionals`, RS001):** listagem por status, aprovação e recusa manual pelo ADMIN, com auditoria de quem decidiu e quando.
   - **Contrato da API:** `docs/API.md` com todos os endpoints, perfis de acesso, bodies, respostas, erros e logins do seed.
   - **Seed com dados de dashboard:** 25 cidadãos (`cidadao01..25@vacinei.com.br`), 142 registros nos últimos 12 meses com mistura de em dia, atrasados e completos; profissional não verificado `paulo.ribeiro@vacinei.com.br` para testar o 403. Senha de todos: `Vacinei@2026` (RF001).
-- **Data da Última Atualização:** 2026-10-28
+  - **Prova de conceito do OCR (`ocr-service/`, RF004/D25):** container Python (OpenCV + pytesseract `por`) no perfil `ocr` do compose, ainda sem integração com API/app. Processa uma pasta de fotos (`OCR_SAMPLES_DIR`, somente leitura) e grava etapas e relatórios em `OCR_OUTPUT_DIR`, ambas fora do repo. Extrai data, lote e vacina (catálogo do seed + vacinas conhecidas fora dele, ex.: ACWY) e compara com `gabarito.txt`. Validado só com imagem sintética; resultados com fotos reais e letra à mão ainda pendentes.
+- **Data da Última Atualização:** 2026-11-01
 
 ---
 
