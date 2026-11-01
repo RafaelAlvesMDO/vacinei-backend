@@ -7,7 +7,8 @@ import { buildPage, toSkipTake } from '../../../utils/pagination';
 export class ListUsersService {
   async execute({ role, isActive, search, page, limit }: ListUsersQueryDTO) {
     // Filtros comuns à lista e aos contadores; o status fica de fora para alimentar as abas
-    const baseWhere: Prisma.UserWhereInput = {};
+    // Dependentes não são contas (D33): ficam fora da gestão de usuários
+    const baseWhere: Prisma.UserWhereInput = { responsibleId: null };
 
     if (role) {
       baseWhere.role = role;

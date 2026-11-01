@@ -192,7 +192,6 @@ export class CalculateVaccineStatusService {
     const records = await prisma.vaccinationRecord.findMany({
       where: {
         userId: citizenId,
-        dependentId: null,
         doseId: { in: doses.map((dose) => dose.id) },
       },
       select: { doseId: true, applicationDate: true },

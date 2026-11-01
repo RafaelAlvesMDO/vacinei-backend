@@ -2,19 +2,21 @@ import { RecordOrigin, VaccineStatus } from '@prisma/client';
 import { prisma } from '../../../config/prisma';
 import { ManualVaccinationRecordDTO } from '../dtos/vaccination-record.dto';
 import { CalculateVaccineStatusService } from './CalculateVaccineStatusService';
-import { manualRecordSelect, validateManualRecord } from './manualRecordRules';
+import { ensureCanManageCard, manualRecordSelect, validateManualRecord } from './manualRecordRules';
 
 export class CreateManualVaccinationRecordService {
   /**
-   * Cadastro manual de dose pelo titular (RF005 / RS003 / RS004). O registro nasce
-   * aguardando confirmação (D06 / D30): qualquer status diferente de CONFIRMADO.
+   * Cadastro manual de dose pelo titular (RF005 / RS003 / RS004), na própria caderneta
+   * ou na de um dependente (`subjectId`, D33). O registro nasce aguardando confirmação
+   * (D06 / D30): qualquer status diferente de CONFIRMADO.
    */
-  async execute(userId: string, data: ManualVaccinationRecordDTO) {
-    await validateManualRecord(userId, data);
+  async execute(requesterId: string, data: ManualVaccinationRecordDTO, subjectId = requesterId) {
+    await ensureCanManageCard(requesterId, subjectId);
+    await validateManualRecord(subjectId, data);
 
     const record = await prisma.vaccinationRecord.create({
       data: {
-        userId,
+        userId: subjectId,
         doseId: data.doseId,
         applicationDate: data.applicationDate,
         lotNumber: data.lote,
@@ -25,7 +27,7 @@ export class CreateManualVaccinationRecordService {
     });
 
     const calculateVaccineStatusService = new CalculateVaccineStatusService();
-    const vaccineStatus = await calculateVaccineStatusService.execute(userId, data.vaccineId);
+    const vaccineStatus = await calculateVaccineStatusService.execute(subjectId, data.vaccineId);
 
     return { record, vaccineStatus };
   }

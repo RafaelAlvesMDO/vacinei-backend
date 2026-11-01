@@ -5,8 +5,9 @@ import { maskCpf } from '../../../utils/cpf';
 
 export class UpdateUserService {
   async execute(userId: string, data: UpdateUserDTO, requesterId: string) {
-    const userExists = await prisma.user.findUnique({
-      where: { id: userId },
+    // Dependentes não são contas (D33) e não passam pela gestão de usuários
+    const userExists = await prisma.user.findFirst({
+      where: { id: userId, responsibleId: null },
     });
 
     if (!userExists) {

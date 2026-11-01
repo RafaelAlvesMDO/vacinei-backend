@@ -31,6 +31,8 @@ interface IOverduePerson {
   id: string;
   name: string;
   cpf: string | null;
+  // Preenchido quando a pessoa é dependente (D33)
+  responsible: { id: string; name: string } | null;
   maxDaysOverdue: number | null;
   vaccines: IOverdueVaccine[];
 }
@@ -59,6 +61,7 @@ export class GetOverdueListService {
         id: item.userId,
         name: item.user.name,
         cpf: maskCpf(item.user.cpf),
+        responsible: item.user.responsible,
         maxDaysOverdue: null,
         vaccines: [],
       };

@@ -11,8 +11,12 @@ Senha de todos: **`Vacinei@2026`**
 | ADMIN | `admin@vacinei.com.br` | |
 | PROFISSIONAL_SAUDE | `mariana.costa@vacinei.com.br` | ENFERMEIRO, COREN 123456/AL, **verificada**. Caderneta com 3 registros MANUAL/OCR |
 | PROFISSIONAL_SAUDE | `paulo.ribeiro@vacinei.com.br` | TECNICO_ENFERMAGEM, COREN 654321/AL, **pendente** de verificação. Caderneta com 2 doses confirmadas pela Mariana e 1 MANUAL |
-| CIDADAO | `carlos.souza@vacinei.com.br` | 2 dependentes |
-| CIDADAO | `cidadao01@vacinei.com.br` … `cidadao25@vacinei.com.br` | com registros de vacinação |
+| CIDADAO | `carlos.souza@vacinei.com.br` | 2 dependentes sem doses (Enzo e Valentina) |
+| CIDADAO | `cidadao01@vacinei.com.br` | Ana Beatriz Lima. 3 dependentes: Miguel (bebê com doses **atrasadas**), Helena (2 vacinas **aguardando conferência**) e Ruth (curatelada de 80 anos, 1 vacina aguardando conferência) |
+| CIDADAO | `cidadao02@vacinei.com.br` | João Pedro Araújo. 2 dependentes: Laura (criança com reforço atrasado e 1 vacina aguardando conferência) e Pedro Henrique (adolescente) |
+| CIDADAO | `cidadao03@vacinei.com.br` … `cidadao25@vacinei.com.br` | com registros de vacinação |
+
+Dependentes não fazem login: o responsável acessa os dados deles em `/dependents` (D33).
 
 ## Convenções
 
@@ -82,7 +86,7 @@ Senha de todos: **`Vacinei@2026`**
 
 ### GET `/auth/me`
 - **Acesso:** Autenticado
-- **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, privacyConsentAt, privacyPolicyVersion, professionalRegistry, dependents[] }`
+- **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, privacyConsentAt, privacyPolicyVersion, professionalRegistry, dependents: [{ id, name, birthDate, cpf, sex, relationship }] }`
   - `privacyConsentAt` (ISO 8601) e `privacyPolicyVersion` (ex: `"2026-10"`): consentimento LGPD dado no cadastro (D26). Podem ser `null` em contas antigas. Só o próprio titular vê esses campos.
   - `professionalRegistry`: mesmo formato do login, `{ isVerified, status }` para `PROFISSIONAL_SAUDE` e `null` para os outros perfis.
 - **Erros:**
@@ -134,13 +138,13 @@ Senha de todos: **`Vacinei@2026`**
 ### GET `/users`
 - **Acesso:** ADMIN
 - **Query:** `role?`, `isActive?` (`true`/`false`), `search?` (nome, e-mail ou CPF, com ou sem máscara), `page?` (padrão 1), `limit?` (padrão 20, máximo 100). Filtros aplicados no banco.
-- **200:** `data: { items: [{ id, name, email, cpf: "***.123.456-**", phone, role, isActive, createdAt, professionalRegistry }], total, page, limit, totalPages, counts: { active, inactive } }`. Ordenado do mais recente. CPF sempre mascarado. `counts` respeita `role` e `search`, mas não `isActive`.
+- **200:** `data: { items: [{ id, name, email, cpf: "***.123.456-**", phone, role, isActive, createdAt, professionalRegistry }], total, page, limit, totalPages, counts: { active, inactive } }`. Ordenado do mais recente. CPF sempre mascarado. `counts` respeita `role` e `search`, mas não `isActive`. Dependentes não são contas e não aparecem (D33), então `email` vem sempre preenchido.
 - **Erros:** `400`, `401`, `403`.
 
 ### GET `/users/me` · GET `/users/:id`
 - **Acesso:** Autenticado. O usuário só consulta a si mesmo; ADMIN consulta qualquer um.
-- **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, updatedAt, professionalRegistry, dependents[] }`. O CPF (do usuário e dos dependentes) vem completo só para o próprio titular. Quando o ADMIN consulta outra pessoa, ele vem mascarado.
-- **Erros:** `401`, `403`, `404`.
+- **200:** `data: { id, name, email, cpf, phone, birthDate, role, avatarUrl, isActive, createdAt, updatedAt, professionalRegistry, dependents: [{ id, name, birthDate, cpf, sex, relationship }] }`. O CPF (do usuário e dos dependentes) vem completo só para o próprio titular. Quando o ADMIN consulta outra pessoa, ele vem mascarado.
+- **Erros:** `401`, `403`, `404` (inclusive para o id de um dependente: `PUT` e `DELETE /users/:id` também respondem `404` para dependentes).
 
 ### PUT `/users/:id`
 - **Acesso:** ADMIN (alterações administrativas, RF003 nota 5). O usuário edita o próprio perfil por `PATCH /auth/me`; o `PUT /users/me` foi removido (D20).
@@ -203,20 +207,21 @@ Objeto `Professional`:
 
 ## Citizens (`/citizens`)
 
-"Cidadão" aqui inclui usuários ativos com perfil `CIDADAO` **ou** `PROFISSIONAL_SAUDE`: o profissional também tem caderneta (D11). `ADMIN` fica de fora.
+"Cidadão" aqui inclui usuários ativos com perfil `CIDADAO` **ou** `PROFISSIONAL_SAUDE`: o profissional também tem caderneta (D11). Os dependentes (D33) também entram. `ADMIN` fica de fora.
 
 ### GET `/citizens`
 - **Acesso:** Profissional verificado
 - **Query:** `search` (2 a 100 caracteres). Se o termo for um CPF completo (11 dígitos, com ou sem máscara), a busca é pelo CPF exato. Senão, a busca é por nome, ignorando acentos e maiúsculas (RF010 nota 1).
-- **200:** `data: [{ id, name, birthDate, cpf: "***.123.456-**", role }]`. Retorna no máximo 20 usuários ativos (`CIDADAO` ou `PROFISSIONAL_SAUDE`), com CPF mascarado.
+  - Busca pelo CPF de um responsável traz ele **e todos os seus dependentes** (a criança muitas vezes não tem CPF).
+- **200:** `data: [{ id, name, birthDate, cpf: "***.123.456-**", role, responsible: { id, name } | null }]`. Retorna no máximo 20 usuários ativos (`CIDADAO` ou `PROFISSIONAL_SAUDE`), com CPF mascarado. `responsible` vem preenchido quando a pessoa é dependente; titulares vêm antes dos dependentes. Dependente sem CPF vem com `cpf: null`.
 - **Erros:** `400`, `401`, `403`.
 
 ### GET `/citizens/:id/vaccination-records` (caderneta)
-- **Acesso:** o próprio cidadão (titular) ou profissional verificado
+- **Acesso:** o próprio cidadão (titular), o responsável, quando `:id` é dependente dele (D33), ou profissional verificado
 - **200:**
   ```
   data: {
-    citizen: { id, name, birthDate },
+    citizen: { id, name, birthDate, responsible: { id, name } | null },
     summary: { totalVaccines, emDia, atrasadas, completas },
     vaccines: [{
       vaccine: { id, name, targetDisease, dosesCount },
@@ -254,7 +259,7 @@ No registro, `status` diferente de `CONFIRMADO` (hoje sempre `EM_DIA`) significa
   - `401`.
   - `403`: perfil `ADMIN`.
   - `404`: vacina não encontrada ou inativa.
-  - `409`: `Esta dose já está registrada na sua caderneta.`
+  - `409`: `Esta dose já está registrada nesta caderneta.`
 
 ### PUT `/vaccination-records/:id` (edição pelo titular)
 - **Acesso:** mesmo do `POST`. Só o titular, e só enquanto o registro não estiver `CONFIRMADO`.
@@ -262,7 +267,7 @@ No registro, `status` diferente de `CONFIRMADO` (hoje sempre `EM_DIA`) significa
 - **200:** mesmo formato do `POST`.
 - **Erros:**
   - `400`, `401`.
-  - `403`: `Acesso negado a este registro de vacinação.` (registro de outra pessoa ou de dependente) ou `Registros confirmados por um profissional não podem ser alterados.`
+  - `403`: `Acesso negado a este registro de vacinação.` (registro de outra pessoa; registro de dependente se edita por `/dependents/:id/vaccination-records/:recordId`) ou `Registros confirmados por um profissional não podem ser alterados.`
   - `404`: registro, vacina ou dose não encontrados.
   - `409`: a nova dose já existe em outro registro da caderneta.
 
@@ -273,7 +278,7 @@ No registro, `status` diferente de `CONFIRMADO` (hoje sempre `EM_DIA`) significa
 
 ### POST `/vaccination-records/confirm` (confirmação presencial, RF010)
 - **Acesso:** Profissional verificado. O profissional aplicador vem da sessão.
-- **Body:** `{ citizenId, vaccineId, doseId, lote }`. `citizenId` pode ser de um `CIDADAO` ou de outro `PROFISSIONAL_SAUDE`. `lote` tem 1 a 20 caracteres alfanuméricos e é salvo em maiúsculas.
+- **Body:** `{ citizenId, vaccineId, doseId, lote }`. `citizenId` pode ser de um `CIDADAO`, de outro `PROFISSIONAL_SAUDE` ou de um dependente (D33). `lote` tem 1 a 20 caracteres alfanuméricos e é salvo em maiúsculas.
 - **201:** dose nova registrada (`action: "CREATED"`).
 - **200:** registro manual/OCR já existente, promovido a `CONFIRMADO` (`action: "CONFIRMED_EXISTING"`).
 - **Body da resposta (201 e 200):** `data: { action, record: { id, userId, status, origin, applicationDate, confirmedAt, lotNumber, dose, appliedBy, ... }, vaccineStatus }`
@@ -281,8 +286,62 @@ No registro, `status` diferente de `CONFIRMADO` (hoje sempre `EM_DIA`) significa
   - `400`: validação, ou a dose não pertence à vacina.
   - `401`, `403`.
   - `403`: `Não é permitido confirmar a própria vacinação` (`citizenId` igual ao usuário logado, RS006).
+  - `403`: `Não é permitido confirmar a vacinação dos próprios dependentes` (RS006, D33).
   - `404`: cidadão ou vacina não encontrados.
   - `409`: dose já confirmada.
+
+---
+
+## Dependents (`/dependents`): dependentes do usuário logado (RF012, RS004, RS008)
+
+Todas as rotas exigem token de `CIDADAO` ou `PROFISSIONAL_SAUDE` (o profissional também pode ser responsável, D11). O responsável vem sempre do token. O dependente é um cidadão **sem login** (sem e-mail e senha) ligado ao responsável (D33).
+
+- **RS004:** só o responsável acessa por estas rotas. O id de um dependente de outra pessoa, ou de alguém que não é dependente, responde **`404 Dependente não encontrado.`**, sem revelar se o cadastro existe. O profissional verificado acessa a caderneta pelas rotas de `/citizens` e confirma doses pelo `/vaccination-records/confirm`.
+
+Objeto `Dependent`: `{ id, name, birthDate, cpf, sex, relationship, createdAt, updatedAt }`. O CPF vem completo, porque o responsável é o titular desses dados (D14).
+
+### GET `/dependents`
+- **200:** `data: Dependent[]`, do mais novo para o mais velho.
+
+### POST `/dependents`
+- **Body:** `{ name, birthDate, sex, cpf?, relationship? }`
+  - `name`: mesma regra do cadastro (nome e sobrenome, até 120 caracteres).
+  - `birthDate`: `YYYY-MM-DD` ou ISO 8601, nunca futura.
+  - `sex`: `MASCULINO` ou `FEMININO`.
+  - `cpf`: opcional, com ou sem máscara, validado pelos dígitos verificadores. Vazio ou `null` = sem CPF.
+  - `relationship`: opcional. `FILHO`, `PAI_MAE`, `CONJUGE`, `CURATELADO` ou `OUTRO`.
+  - **Idade (ECA):** o dependente precisa ter **menos de 18 anos**, exceto com `relationship: "CURATELADO"`, que aceita qualquer idade.
+- **201:** `data: Dependent`
+- **Erros:**
+  - `400`: validação, data futura ou `O dependente deve ter menos de 18 anos. Maiores de idade só podem ser cadastrados com o parentesco CURATELADO.`
+  - `401`, `403` (perfil `ADMIN`).
+  - `409`: `Já existe uma pessoa cadastrada com este CPF.` (em qualquer usuário, inclusive titulares) ou `Você já cadastrou um dependente com este nome e data de nascimento.` (RS008; nome comparado sem acentos, maiúsculas e espaços extras).
+
+### GET `/dependents/:id`
+- **200:** `data: Dependent`
+- **Erros:** `400` (id não é UUID), `401`, `403`, `404`.
+
+### PUT `/dependents/:id`
+- **Body:** o mesmo do `POST`. Substitui os dados básicos: `cpf` ou `relationship` omitidos ficam nulos.
+- A regra de idade só é reavaliada quando `birthDate` ou `relationship` mudam: um dependente que completou 18 anos continua editável normalmente.
+- **200:** `data: Dependent`
+- **Erros:** os do `POST`, `404` e `400` `A data de nascimento não pode ser posterior a uma dose já registrada na caderneta.`
+
+### DELETE `/dependents/:id`
+- **204:** sem corpo. Remove o dependente e os registros ainda **não confirmados**.
+- **Erros:** `400`, `401`, `403`, `404` e `409` `Este dependente possui doses confirmadas por um profissional e não pode ser removido.`
+
+### Caderneta e registro manual do dependente
+Mesmas regras e respostas da caderneta e do registro manual do titular (D30, D32), com `:id` = dependente:
+
+| Método | Rota | Equivale a |
+| :--- | :--- | :--- |
+| GET | `/dependents/:id/vaccination-records` | `GET /citizens/:id/vaccination-records` (com `citizen.responsible` preenchido) |
+| POST | `/dependents/:id/vaccination-records` | `POST /vaccination-records`. A data não pode ser anterior ao nascimento **do dependente** |
+| PUT | `/dependents/:id/vaccination-records/:recordId` | `PUT /vaccination-records/:id` |
+| DELETE | `/dependents/:id/vaccination-records/:recordId` | `DELETE /vaccination-records/:id` |
+
+- **Erros adicionais:** `404 Dependente não encontrado.` (RS004). Registro que não é da caderneta do dependente responde `403 Acesso negado a este registro de vacinação.`
 
 ---
 
@@ -361,14 +420,14 @@ Objeto `Ubs`: `{ id, cnes, name, zipCode, address (logradouro), number, neighbor
 
 ## Dashboard (`/dashboard`): painel do profissional (RF009)
 
-`/summary` e `/monthly` são dados agregados e aceitam **ADMIN** ou **profissional verificado**. `/recent-doses` e `/overdue` identificam cidadãos com dados de saúde e exigem **profissional verificado** (LGPD, princípio da necessidade). Os dados consideram as cadernetas de usuários ativos `CIDADAO` e `PROFISSIONAL_SAUDE` (D11); dependentes ainda não entram.
+`/summary` e `/monthly` são dados agregados e aceitam **ADMIN** ou **profissional verificado**. `/recent-doses` e `/overdue` identificam cidadãos com dados de saúde e exigem **profissional verificado** (LGPD, princípio da necessidade). Os dados consideram as cadernetas de usuários ativos `CIDADAO` e `PROFISSIONAL_SAUDE` (D11), incluindo os dependentes (D33).
 
 | Método | Rota | Query | Resposta 200 (`data`) |
 | :--- | :--- | :--- | :--- |
 | GET | `/dashboard/summary` | — | `{ totalCadernetas, totalVacinasRegistradas, totalDosesAtrasadas, totalDosesAguardandoConferencia }` |
-| GET | `/dashboard/recent-doses` | `limit?` (1 a 50, padrão 10) | `[{ id, citizen: { id, name }, vaccine: { id, name }, dose: { id, doseNumber, doseName }, applicationDate, status }]` |
+| GET | `/dashboard/recent-doses` | `limit?` (1 a 50, padrão 10) | `[{ id, citizen: { id, name, responsible: { id, name } \| null }, vaccine: { id, name }, dose: { id, doseNumber, doseName }, applicationDate, status }]` |
 | GET | `/dashboard/monthly` | — | `[{ month: "YYYY-MM", total }]`: últimos 12 meses, fuso America/Maceio |
-| GET | `/dashboard/overdue` | `page?` (padrão 1), `limit?` (1 a 100, padrão 20), `search?` (nome), `status?` (`ATRASADA` ou `AGUARDANDO_CONFERENCIA`, padrão `ATRASADA`) | `{ items, total, page, limit, totalPages, counts, doseCounts }`, com `items: [{ id, name, cpf, maxDaysOverdue, vaccines: [{ vaccineId, vaccineName, nextDose: { id, doseName } \| null, nextDoseDate, daysOverdue, pendingDoses: [{ id, doseName, applicationDate }] }] }]` |
+| GET | `/dashboard/overdue` | `page?` (padrão 1), `limit?` (1 a 100, padrão 20), `search?` (nome), `status?` (`ATRASADA` ou `AGUARDANDO_CONFERENCIA`, padrão `ATRASADA`) | `{ items, total, page, limit, totalPages, counts, doseCounts }`, com `items: [{ id, name, cpf, responsible: { id, name } \| null, maxDaysOverdue, vaccines: [{ vaccineId, vaccineName, nextDose: { id, doseName } \| null, nextDoseDate, daysOverdue, pendingDoses: [{ id, doseName, applicationDate }] }] }]` |
 
 - **`/summary`:** `totalDosesAtrasadas` conta as vacinas com dose vencida **sem nenhum registro** (situação `ATRASADA` do D32). `totalDosesAguardandoConferencia` conta as doses informadas pelo cidadão e ainda não confirmadas.
 - **`/overdue` (busca ativa de faltosos, D21, D32):** dois grupos, escolhidos por `status`:

@@ -56,18 +56,35 @@ enum ClientPlatform {
   WEB
 }
 
+enum Sex {
+  MASCULINO
+  FEMININO
+}
+
+// Parentesco do dependente com o responsável (D33); CURATELADO dispensa o limite de 18 anos
+enum DependentRelationship {
+  FILHO
+  PAI_MAE
+  CONJUGE
+  CURATELADO
+  OUTRO
+}
+
 // ==========================================
 // USUÁRIOS, AUTENTICAÇÃO E PERFIS
 // ==========================================
 
+// Dependente (RF012, D33): User CIDADAO sem credenciais (email e passwordHash nulos),
+// ligado ao responsável por responsibleId; reaproveita caderneta, alertas e confirmação
 model User {
   id           String    @id @default(uuid())
   name         String
-  email        String    @unique
-  passwordHash String    @map("password_hash")
+  email        String?   @unique
+  passwordHash String?   @map("password_hash")
   cpf          String?   @unique
   phone        String?
   birthDate    DateTime? @map("birth_date")
+  sex          Sex?
   role         UserRole  @default(CIDADAO)
   avatarUrl    String?   @map("avatar_url")
   isActive     Boolean   @default(true) @map("is_active")
@@ -78,11 +95,16 @@ model User {
   privacyConsentAt     DateTime? @map("privacy_consent_at")
   privacyPolicyVersion String?   @map("privacy_policy_version")
 
+  // Dependente (D33). Restrict: apagar o responsável não pode apagar doses confirmadas
+  responsibleId String?                @map("responsible_id")
+  relationship  DependentRelationship?
+
   // Relações
+  responsible          User?                  @relation("UserDependents", fields: [responsibleId], references: [id], onDelete: Restrict)
+  dependents           User[]                 @relation("UserDependents")
   professionalRegistry ProfessionalRegistry?
   verifiedRegistries   ProfessionalRegistry[] @relation("RegistryVerifiedBy")
   rejectedRegistries   ProfessionalRegistry[] @relation("RegistryRejectedBy")
-  dependents           Dependent[]
   vaccinationRecords   VaccinationRecord[]    @relation("CitizenVaccines")
   appliedRecords       VaccinationRecord[]    @relation("AppliedVaccines")
   refreshTokens        RefreshToken[]
@@ -90,25 +112,26 @@ model User {
   passwordResetCodes   PasswordResetCode[]
   notifications        Notification[]
 
+  @@index([responsibleId])
   @@map("users")
 }
 
 model ProfessionalRegistry {
-  id             String    @id @default(uuid())
-  userId         String    @unique @map("user_id")
-  category       ProfessionalCategory
-  council        String    // Derivado da categoria: CRM, COREN, CRF
-  registryNumber String    @map("registry_number")
-  uf             String    // Sigla do estado (ex: AL, SP)
-  isVerified     Boolean   @default(false) @map("is_verified")
-  verifiedAt     DateTime? @map("verified_at")
-  verifiedById   String?   @map("verified_by_id")
+  id              String               @id @default(uuid())
+  userId          String               @unique @map("user_id")
+  category        ProfessionalCategory
+  council         String // Derivado da categoria: CRM, COREN, CRF
+  registryNumber  String               @map("registry_number")
+  uf              String // Sigla do estado (ex: AL, SP)
+  isVerified      Boolean              @default(false) @map("is_verified")
+  verifiedAt      DateTime?            @map("verified_at")
+  verifiedById    String?              @map("verified_by_id")
   // Recusa da verificação (RS001): conta segue ativa, porém não verificada
-  rejectedAt      DateTime? @map("rejected_at")
-  rejectedById    String?   @map("rejected_by_id")
-  rejectionReason String?   @map("rejection_reason")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  rejectedAt      DateTime?            @map("rejected_at")
+  rejectedById    String?              @map("rejected_by_id")
+  rejectionReason String?              @map("rejection_reason")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
 
   user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   verifiedBy User? @relation("RegistryVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
@@ -133,7 +156,7 @@ model RefreshToken {
 
 model PasswordResetCode {
   id           String    @id @default(uuid())
-  code         String    // Hash SHA-256 do código de 6 dígitos
+  code         String // Hash SHA-256 do código de 6 dígitos
   userId       String    @map("user_id")
   attempts     Int       @default(0)
   isUsed       Boolean   @default(false) @map("is_used")
@@ -144,29 +167,6 @@ model PasswordResetCode {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_reset_codes")
-}
-
-// ==========================================
-// DEPENDENTES (RS008)
-// ==========================================
-
-model Dependent {
-  id           String    @id @default(uuid())
-  name         String
-  birthDate    DateTime  @map("birth_date")
-  cpf          String?   @unique
-  relationship String    // ex: FILHO, FILHA, TUTELADO
-  gender       String?
-  guardianId   String    @map("guardian_id")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-
-  guardian           User                @relation(fields: [guardianId], references: [id], onDelete: Cascade)
-  vaccinationRecords VaccinationRecord[]
-
-  // RS008: Impede cadastro com mesmo Nome Completo e Data de Nascimento por outro responsável
-  @@unique([name, birthDate])
-  @@map("dependents")
 }
 
 // ==========================================
@@ -194,7 +194,7 @@ model Dose {
   id                       String   @id @default(uuid())
   vaccineId                String   @map("vaccine_id")
   doseNumber               Int      @map("dose_number") // 1, 2, 3... ou 0 para dose única
-  doseName                 String   @map("dose_name")   // ex: 1ª Dose, Reforço
+  doseName                 String   @map("dose_name") // ex: 1ª Dose, Reforço
   recommendedAgeMonths     Int?     @map("recommended_age_months")
   intervalDaysFromPrevious Int?     @map("interval_days_from_previous")
   description              String?
@@ -215,7 +215,6 @@ model Dose {
 model VaccinationRecord {
   id              String        @id @default(uuid())
   userId          String?       @map("user_id")
-  dependentId     String?       @map("dependent_id")
   doseId          String        @map("dose_id")
   status          VaccineStatus @default(EM_DIA)
   applicationDate DateTime?     @map("application_date")
@@ -231,11 +230,10 @@ model VaccinationRecord {
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
-  user      User?      @relation("CitizenVaccines", fields: [userId], references: [id], onDelete: Cascade)
-  dependent Dependent? @relation(fields: [dependentId], references: [id], onDelete: Cascade)
-  dose      Dose       @relation(fields: [doseId], references: [id], onDelete: Restrict)
-  ubs       Ubs?       @relation(fields: [ubsId], references: [id], onDelete: SetNull)
-  appliedBy User?      @relation("AppliedVaccines", fields: [appliedById], references: [id], onDelete: SetNull)
+  user      User? @relation("CitizenVaccines", fields: [userId], references: [id], onDelete: Cascade)
+  dose      Dose  @relation(fields: [doseId], references: [id], onDelete: Restrict)
+  ubs       Ubs?  @relation(fields: [ubsId], references: [id], onDelete: SetNull)
+  appliedBy User? @relation("AppliedVaccines", fields: [appliedById], references: [id], onDelete: SetNull)
 
   @@map("vaccination_records")
 }
@@ -248,11 +246,11 @@ model Ubs {
   id           String   @id @default(uuid())
   cnes         String?  @unique // Código Nacional de Estabelecimentos de Saúde
   name         String
-  address      String   // Logradouro
+  address      String // Logradouro
   number       String   @default("s/n")
   neighborhood String?
   city         String
-  state        String   // UF
+  state        String // UF
   zipCode      String?  @map("zip_code")
   latitude     Float
   longitude    Float
@@ -336,14 +334,14 @@ model DeviceToken {
 }
 
 model Notification {
-  id        String    @id @default(uuid())
-  userId    String    @map("user_id")
-  title     String
-  body      String
-  data      String?   // JSON com payload complementar
-  isRead    Boolean   @default(false) @map("is_read")
-  sentAt    DateTime  @default(now()) @map("sent_at")
-  readAt    DateTime? @map("read_at")
+  id     String    @id @default(uuid())
+  userId String    @map("user_id")
+  title  String
+  body   String
+  data   String? // JSON com payload complementar
+  isRead Boolean   @default(false) @map("is_read")
+  sentAt DateTime  @default(now()) @map("sent_at")
+  readAt DateTime? @map("read_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

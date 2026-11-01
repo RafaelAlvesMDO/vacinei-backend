@@ -131,7 +131,9 @@ export class AuthController {
         privacyConsentAt: true,
         privacyPolicyVersion: true,
         professionalRegistry: true,
-        dependents: true,
+        dependents: {
+          select: { id: true, name: true, birthDate: true, cpf: true, sex: true, relationship: true },
+        },
       },
     });
 

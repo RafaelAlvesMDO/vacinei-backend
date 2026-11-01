@@ -2,6 +2,7 @@ import { VaccineStatus } from '@prisma/client';
 import { prisma } from '../../../config/prisma';
 import { AppError } from '../../../errors/AppError';
 import { ManualVaccinationRecordDTO } from '../dtos/vaccination-record.dto';
+import { findOwnDependent } from '../../dependents/services/dependentRules';
 
 export const manualRecordSelect = {
   id: true,
@@ -25,8 +26,18 @@ export const manualRecordSelect = {
 const toDay = (date: Date) => date.toISOString().slice(0, 10);
 
 /**
+ * RS004: a caderneta é do próprio usuário ou de um dependente dele (D33).
+ * Qualquer outra caderneta responde 404, como a rota de dependentes.
+ */
+export async function ensureCanManageCard(requesterId: string, subjectId: string) {
+  if (requesterId !== subjectId) {
+    await findOwnDependent(requesterId, subjectId);
+  }
+}
+
+/**
  * Validações do registro manual (RS003): vacina ativa, dose da vacina, data entre o
- * nascimento e hoje e dose ainda não registrada na caderneta do titular.
+ * nascimento e hoje e dose ainda não registrada na caderneta (do titular ou do dependente).
  * Na edição, `ignoreRecordId` exclui o próprio registro da checagem de duplicidade.
  */
 export async function validateManualRecord(
@@ -63,7 +74,6 @@ export async function validateManualRecord(
   const duplicate = await prisma.vaccinationRecord.findFirst({
     where: {
       userId,
-      dependentId: null,
       doseId,
       ...(ignoreRecordId && { id: { not: ignoreRecordId } }),
     },
@@ -71,25 +81,25 @@ export async function validateManualRecord(
   });
 
   if (duplicate) {
-    throw new AppError('Esta dose já está registrada na sua caderneta.', 409);
+    throw new AppError('Esta dose já está registrada nesta caderneta.', 409);
   }
 }
 
 /**
- * Busca um registro que o titular ainda pode editar ou excluir (D30): precisa ser da
- * própria caderneta (não de dependente) e não pode estar CONFIRMADO.
+ * Busca um registro que ainda pode ser editado ou excluído (D30): precisa ser da
+ * caderneta informada (titular ou dependente) e não pode estar CONFIRMADO.
  */
 export async function findOwnEditableRecord(userId: string, recordId: string) {
   const record = await prisma.vaccinationRecord.findUnique({
     where: { id: recordId },
-    select: { id: true, userId: true, dependentId: true, status: true },
+    select: { id: true, userId: true, status: true },
   });
 
   if (!record) {
     throw new AppError('Registro de vacinação não encontrado.', 404);
   }
 
-  if (record.userId !== userId || record.dependentId !== null) {
+  if (record.userId !== userId) {
     throw new AppError('Acesso negado a este registro de vacinação.', 403);
   }
 

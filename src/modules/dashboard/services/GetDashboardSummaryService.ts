@@ -3,7 +3,7 @@ import { loadCitizenVaccineStatuses } from './loadCitizenVaccineStatuses';
 export class GetDashboardSummaryService {
   /**
    * Indicadores do painel do profissional (RF009). Considera as cadernetas de
-   * cidadãos e profissionais ativos (D11); dependentes entram com o RF012.
+   * cidadãos e profissionais ativos (D11) e de seus dependentes (D33).
    * Doses atrasadas contam só as que não têm nenhum registro; as informadas pelo
    * cidadão e ainda não confirmadas ficam em `totalDosesAguardandoConferencia` (D32).
    */

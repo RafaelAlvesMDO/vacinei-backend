@@ -17,14 +17,14 @@ const phoneSchema = z
   .regex(/^\d{11}$/, 'Celular deve conter apenas números: DDD + 9 dígitos (11 no total)');
 
 // Aceita com ou sem máscara; segue adiante só com os 11 dígitos
-const cpfSchema = z
+export const cpfSchema = z
   .string('CPF é obrigatório')
   .trim()
   .refine(isValidCpf, 'CPF inválido')
   .transform(normalizeCpf);
 
 // YYYY-MM-DD ou ISO 8601; usada pelo motor de regras do calendário vacinal (RF007)
-const birthDateSchema = z
+export const birthDateSchema = z
   .union([z.iso.datetime(), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)], {
     error: (issue) =>
       issue.input === undefined

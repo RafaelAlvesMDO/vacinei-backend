@@ -90,6 +90,7 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
   - Finalidade da data de nascimento: base do calendário vacinal (RF007).
   - LGPD: princípios da finalidade, necessidade e minimização. Quem já tem o CPF em mãos confirma a identidade, mas a API não divulga o número a terceiros.
 - **Observação:** no banco as colunas continuam aceitando nulo por causa de registros antigos. A obrigatoriedade é garantida pela validação (Zod) no cadastro.
+- **Exceção (D33):** para o dependente, o CPF é opcional (muitas crianças não têm), mas, se informado, é validado e único em toda a base. O responsável vê o CPF completo dos próprios dependentes; o profissional, mascarado.
 - **Requisito:** RF001, RF007, RF010; LGPD.
 
 ### D26 — Consentimento explícito à Política de Privacidade no cadastro
@@ -99,7 +100,7 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Requisito:** RF001; LGPD.
 
 ### D21 — Lista de doses atrasadas só para profissional verificado (busca ativa)
-- **Decisão:** o `GET /dashboard/overdue` lista as pessoas (CIDADAO e PROFISSIONAL_SAUDE ativos) com vacina `ATRASADA`, com nome, CPF mascarado e as vacinas em atraso, e, em outro grupo, as pessoas com doses aguardando conferência (D32). Só o profissional verificado acessa; o `ADMIN` continua apenas com o total agregado do `/summary` (D05). O cálculo é o mesmo do card "Doses atrasadas", para que os números batam.
+- **Decisão:** o `GET /dashboard/overdue` lista as pessoas (CIDADAO e PROFISSIONAL_SAUDE ativos, incluindo dependentes com o nome do responsável, D33) com vacina `ATRASADA`, com nome, CPF mascarado e as vacinas em atraso, e, em outro grupo, as pessoas com doses aguardando conferência (D32). Só o profissional verificado acessa; o `ADMIN` continua apenas com o total agregado do `/summary` (D05). O cálculo é o mesmo do card "Doses atrasadas", para que os números batam.
 - **Motivo:** finalidade de **busca ativa de faltosos**: o profissional precisa saber quem procurar para completar o esquema vacinal. São dados de saúde identificados, então, pelo princípio da necessidade, ficam restritos a quem presta o atendimento, com CPF mascarado (D14) e paginação limitada (máx. 100).
 - **Requisito:** RF009; RS005; LGPD.
 
@@ -125,7 +126,7 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
   - **Validações (RS003):** a vacina precisa existir e estar ativa. A dose precisa pertencer à vacina. A data de aplicação não pode ser futura nem anterior à data de nascimento do titular. O lote é opcional e segue a regra do confirm. A mesma dose não pode ser registrada duas vezes na caderneta (409).
   - **Edição e exclusão:** o titular edita (`PUT`) ou exclui (`DELETE`) o próprio registro só enquanto ele não estiver `CONFIRMADO`. Registro de outra pessoa ou já confirmado responde 403. Depois da confirmação, só um profissional pode corrigir o registro (trabalho futuro).
   - **Status do registro:** o campo `status` do `VaccinationRecord` reaproveita o enum `VaccineStatus`. Num registro, **qualquer valor diferente de `CONFIRMADO` (hoje `EM_DIA`) significa "aguardando confirmação"**. Os valores `ATRASADA` e `COMPLETA` descrevem o esquema da vacina, calculado na caderneta, e não o registro. Na confirmação (`/confirm`), o registro manual é promovido com `action: "CONFIRMED_EXISTING"`, como os registros do seed.
-  - **Dependentes:** o modelo já tem `dependentId` opcional, mas o endpoint ainda não aceita esse campo. Só registros da caderneta do próprio titular (`dependentId` nulo) são criados ou alterados. A lógica de dependentes fica para a etapa 7 (D09).
+  - **Dependentes:** o responsável registra, edita e exclui doses na caderneta do dependente pelas rotas `/dependents/:id/vaccination-records`, com as mesmas regras. A data de aplicação é comparada com o nascimento do dependente (D33).
 - **Melhoria futura:** separar um enum próprio para o status do registro (ex.: `PENDENTE`/`CONFIRMADO`), sem misturar com o status do esquema vacinal. Isso exige migration e ajustes no seed, na caderneta, no dashboard e no confirm.
 - **Motivo:** permitir que o cidadão digitalize o histórico (RF005) sem que um registro não validado ganhe o peso de uma confirmação presencial. Bloquear a alteração após a confirmação preserva a validação por terceiro (RS006). Reaproveitar o enum evita uma migration perto da pré-banca.
 - **Requisito:** RF005, RS003, RS004, RF010.
@@ -209,9 +210,25 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Motivo:** hoje a confirmação de dose não registra a UBS, e incluí-la muda o fluxo do backend.
 - **Requisito:** RF008 (nota 9).
 
-## Pendências
+## Dependentes
 
-### D09 — Dependentes ainda não implementados
-- **Decisão:** o módulo de dependentes ainda não existe. Quando for implementado, as doses de dependentes devem entrar nas métricas agregadas, na busca do profissional e no fluxo de confirmação (D06).
-- **Motivo:** evitar que dependentes fiquem de fora de relatórios e da validação.
-- **Requisito:** módulo de dependentes.
+### D33 — Dependente é um cidadão sem credenciais, ligado ao responsável
+- **Decisão (modelagem):** o dependente é um `User` com perfil `CIDADAO`, **sem e-mail e sem senha** (`email` e `passwordHash` passaram a aceitar nulo), ligado ao responsável por `responsibleId`. O model `Dependent` e a coluna `vaccination_records.dependent_id`, que nunca foram usados por endpoints, foram removidos (migration `dependentes_como_usuarios`). Campos novos em `User`: `sex` (`MASCULINO`/`FEMININO`) e `relationship` (`FILHO`, `PAI_MAE`, `CONJUGE`, `CURATELADO`, `OUTRO`, opcional).
+  - **Reaproveitamento:** caderneta, `CalculateVaccineStatusService`, as três situações do D32, o registro manual (D30), a confirmação (D06), a busca e o dashboard funcionam sem lógica duplicada, porque os registros continuam ligados por `userId`.
+  - **`onDelete: Restrict`:** apagar o responsável não pode apagar em cascata doses confirmadas, que são dado de saúde. Na prática, contas são só desativadas (D16), e os dependentes de um responsável desativado continuam visíveis para o profissional.
+  - **Sem login:** sem e-mail, o dependente nunca é encontrado no login, no "esqueci a senha" nem na troca de senha. A gestão de usuários do admin (`/users`) ignora dependentes (`404` no detalhe, na edição e na desativação), porque eles não são contas.
+- **Decisão (regras):**
+  - **Quem cadastra:** `CIDADAO` ou `PROFISSIONAL_SAUDE` (o profissional também é cidadão, D11). Dependente não tem dependentes.
+  - **Idade (ECA):** no cadastro, o dependente precisa ter menos de 18 anos, exceto quando o parentesco é `CURATELADO`, que aceita qualquer idade. A data de nascimento nunca é futura. Quem completa 18 anos depois do cadastro continua normalmente: a regra só é reavaliada quando a data de nascimento ou o parentesco mudam.
+  - **RS008 (duplicidade, 409):** CPF já usado por qualquer pessoa da base; ou mesmo nome (sem acentos, maiúsculas e espaços extras, como no D15) e mesma data de nascimento para o mesmo responsável. Responsáveis diferentes podem cadastrar a mesma criança sem CPF (o caso de dois responsáveis fica para depois).
+  - **RS004 (acesso):** os dados do dependente são acessados só pelo responsável (rotas `/dependents/...`) e por profissionais verificados (rotas `/citizens/...` e `/confirm`). Por `/dependents`, um id que não é dependente do usuário logado responde `404`, sem revelar se o cadastro existe. O `ADMIN` continua só com agregados (D05).
+  - **Edição:** dados básicos (nome, nascimento, sexo, CPF, parentesco). A nova data de nascimento não pode ficar depois de uma dose já registrada.
+  - **Remoção:** só se não houver dose `CONFIRMADO`; os registros pendentes são apagados junto. Com dose confirmada, `409`.
+  - **RS006:** o profissional não confirma dose própria nem dos próprios dependentes.
+  - **Profissional:** a busca de cidadãos inclui dependentes com o nome do responsável. A busca pelo CPF do responsável traz também os dependentes dele, porque a criança muitas vezes não tem CPF. A busca ativa (`/overdue`) e as doses recentes também mostram o responsável. As métricas agregadas passam a contar os dependentes (resolve o antigo D09).
+- **Melhorias futuras:**
+  - Dependente com CPF assumir a própria conta ao criar login: hoje o cadastro público responde `409` (CPF já cadastrado). O caminho é converter o dependente em titular (preencher e-mail, senha e consentimento, limpar `responsibleId`), mantendo a caderneta.
+  - Transferência do dependente ao completar 18 anos.
+  - Mais de um responsável por dependente, com convite para o outro responsável.
+- **Motivo:** uma tabela separada obrigaria cada serviço da caderneta, do confirm e do dashboard a aceitar "usuário **ou** dependente", duplicando consultas em cerca de 10 lugares, perto da pré-banca. Com o dependente como `User`, as regras já validadas (D30, D32, RS006) valem para ele automaticamente.
+- **Requisito:** RF012, RS004, RS006, RS008; D09 (resolvido), D11, D14, D30, D32.

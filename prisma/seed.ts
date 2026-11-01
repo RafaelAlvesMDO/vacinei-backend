@@ -1,4 +1,13 @@
-import { PrismaClient, UserRole, TargetAudience, RecordOrigin, VaccineStatus, ProfessionalCategory } from '@prisma/client';
+import {
+  PrismaClient,
+  UserRole,
+  TargetAudience,
+  RecordOrigin,
+  VaccineStatus,
+  ProfessionalCategory,
+  Sex,
+  DependentRelationship,
+} from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { authConfig } from '../src/config/auth';
 import { privacyConfig } from '../src/config/privacy';
@@ -116,7 +125,8 @@ const PROFILES: Record<string, VaccinationProfile> = {
 
 const CITIZENS: { name: string; profile: keyof typeof PROFILES }[] = [
   { name: 'Ana Beatriz Lima', profile: 'ADULTO_COMPLETO' },
-  { name: 'João Pedro Araújo', profile: 'BEBE_EM_DIA' },
+  // Adulto: é responsável por dependentes (D33)
+  { name: 'João Pedro Araújo', profile: 'ADULTO_COMPLETO' },
   { name: 'Maria Eduarda Santos', profile: 'BEBE_ATRASADO' },
   { name: 'José Antônio Ferreira', profile: 'IDOSO' },
   { name: 'Lúcia Helena Gonçalves', profile: 'GESTANTE' },
@@ -152,7 +162,8 @@ async function main() {
   await prisma.passwordResetCode.deleteMany();
   await prisma.refreshToken.deleteMany();
   await prisma.vaccinationRecord.deleteMany();
-  await prisma.dependent.deleteMany();
+  // Dependentes antes dos responsáveis (responsibleId com onDelete: Restrict, D33)
+  await prisma.user.deleteMany({ where: { responsibleId: { not: null } } });
   await prisma.professionalRegistry.deleteMany();
   await prisma.campaignVaccine.deleteMany();
   await prisma.campaignUbs.deleteMany();
@@ -218,21 +229,22 @@ async function main() {
       birthDate: new Date('1992-05-14'),
       role: UserRole.CIDADAO,
       isActive: true,
+      // Dependentes (D33): cidadãos sem e-mail e senha, ligados ao responsável
       dependents: {
         create: [
           {
             name: 'Enzo Gabriel Souza',
             birthDate: new Date('2024-03-15'),
             cpf: generateCpf(200000001),
-            relationship: 'FILHO',
-            gender: 'M',
+            sex: Sex.MASCULINO,
+            relationship: DependentRelationship.FILHO,
           },
           {
             name: 'Valentina Souza',
             birthDate: new Date('2021-08-20'),
             cpf: generateCpf(200000002),
-            relationship: 'FILHA',
-            gender: 'F',
+            sex: Sex.FEMININO,
+            relationship: DependentRelationship.FILHO,
           },
         ],
       },
@@ -931,6 +943,7 @@ async function main() {
   const vaccineIndex = new Map(vaccines.map((v, i) => [v.name, i + 1]));
 
   let recordsCount = 0;
+  const citizenIds: string[] = [];
 
   for (const [index, entry] of CITIZENS.entries()) {
     const number = String(index + 1).padStart(2, '0');
@@ -953,6 +966,7 @@ async function main() {
         isActive: true,
       },
     });
+    citizenIds.push(created.id);
 
     let recordIndex = 0;
     for (const [vaccineName, appliedDaysAgo] of Object.entries(profile.vaccines)) {
@@ -992,6 +1006,121 @@ async function main() {
   }
 
   console.log(`✅ ${CITIZENS.length} cidadãos e ${recordsCount} registros de vacinação criados.`);
+
+  // 5.1 Dependentes de cidadao01 e cidadao02 (RF012 / D33). As doses seguem os perfis de caderneta;
+  // as vacinas em `informed` ficam como registro MANUAL aguardando conferência (D32) e as demais
+  // são confirmadas pela Mariana. Os perfis BEBE_ATRASADO e CRIANCA_MISTO geram doses atrasadas.
+  console.log('👨‍👩‍👧 Criando dependentes...');
+  const dependentsData: {
+    responsibleIndex: number;
+    name: string;
+    sex: Sex;
+    relationship: DependentRelationship;
+    profile: keyof typeof PROFILES;
+    birthDate?: string; // sobrescreve a data do perfil (ex.: curatelado adulto)
+    withCpf: boolean;
+    informed: string[];
+  }[] = [
+    {
+      responsibleIndex: 0,
+      name: 'Miguel Lima Rocha',
+      sex: Sex.MASCULINO,
+      relationship: DependentRelationship.FILHO,
+      profile: 'BEBE_ATRASADO',
+      withCpf: true,
+      informed: [],
+    },
+    {
+      responsibleIndex: 0,
+      name: 'Helena Lima Rocha',
+      sex: Sex.FEMININO,
+      relationship: DependentRelationship.FILHO,
+      profile: 'BEBE_EM_DIA',
+      withCpf: false,
+      informed: ['Rotavírus Humano (VRH)', 'Meningocócica C Conjugada'],
+    },
+    {
+      responsibleIndex: 0,
+      name: 'Ruth Lima de Oliveira',
+      sex: Sex.FEMININO,
+      relationship: DependentRelationship.CURATELADO,
+      profile: 'IDOSO',
+      birthDate: '1946-02-11',
+      withCpf: true,
+      informed: ['Febre Amarela'],
+    },
+    {
+      responsibleIndex: 1,
+      name: 'Laura Araújo Mendes',
+      sex: Sex.FEMININO,
+      relationship: DependentRelationship.FILHO,
+      profile: 'CRIANCA_MISTO',
+      withCpf: false,
+      informed: ['Febre Amarela'],
+    },
+    {
+      responsibleIndex: 1,
+      name: 'Pedro Henrique Araújo',
+      sex: Sex.MASCULINO,
+      relationship: DependentRelationship.FILHO,
+      profile: 'ADOLESCENTE',
+      withCpf: true,
+      informed: [],
+    },
+  ];
+
+  let dependentRecordsCount = 0;
+
+  for (const [index, entry] of dependentsData.entries()) {
+    const profile = PROFILES[entry.profile];
+
+    const dependent = await prisma.user.create({
+      data: {
+        name: entry.name,
+        cpf: entry.withCpf ? generateCpf(700000000 + index + 1) : null,
+        birthDate: entry.birthDate
+          ? new Date(entry.birthDate)
+          : profile.bornDaysAgo !== undefined
+            ? daysAgo(profile.bornDaysAgo)
+            : new Date(profile.birthDate!),
+        sex: entry.sex,
+        relationship: entry.relationship,
+        role: UserRole.CIDADAO,
+        responsibleId: citizenIds[entry.responsibleIndex],
+      },
+    });
+
+    for (const [vaccineName, appliedDaysAgo] of Object.entries(profile.vaccines)) {
+      const doses = dosesByVaccine.get(vaccineName);
+      if (!doses) throw new Error(`Vacina não encontrada no seed: ${vaccineName}`);
+
+      const isPresencial = !entry.informed.includes(vaccineName);
+
+      for (const [doseIdx, days] of appliedDaysAgo.entries()) {
+        const applicationDate = daysAgo(Math.max(days, 1));
+
+        await prisma.vaccinationRecord.create({
+          data: {
+            userId: dependent.id,
+            doseId: doses[doseIdx].id,
+            applicationDate,
+            confirmedAt: isPresencial ? applicationDate : null,
+            status: isPresencial ? VaccineStatus.CONFIRMADO : VaccineStatus.EM_DIA,
+            origin: isPresencial ? RecordOrigin.SISTEMA_PRESENCIAL : RecordOrigin.MANUAL,
+            lotNumber: `LTD${String(index + 1).padStart(2, '0')}${String(vaccineIndex.get(vaccineName)).padStart(2, '0')}${doseIdx + 1}`,
+            appliedById: isPresencial ? professional.id : null,
+            ubsId: isPresencial ? ubsIds[(index * 5 + doseIdx) % ubsIds.length] : null,
+          },
+        });
+
+        dependentRecordsCount++;
+      }
+    }
+  }
+
+  console.log(
+    `✅ ${dependentsData.length + 2} dependentes (cidadao01, cidadao02 e Carlos) e ${dependentRecordsCount} registros de vacinação.`,
+  );
 
   // 6. Cadernetas dos profissionais (D11): o profissional também é cidadão.
   // Mariana só tem registros próprios (MANUAL/OCR), para testar o 403 do RS006 ao tentar confirmá-los;

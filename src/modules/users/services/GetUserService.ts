@@ -4,8 +4,9 @@ import { maskCpf } from '../../../utils/cpf';
 
 export class GetUserService {
   async execute(userId: string, requesterId: string) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
+    // Dependentes não são contas (D33): são consultados só pelo responsável em /dependents
+    const user = await prisma.user.findFirst({
+      where: { id: userId, responsibleId: null },
       select: {
         id: true,
         name: true,
@@ -25,8 +26,8 @@ export class GetUserService {
             name: true,
             birthDate: true,
             cpf: true,
+            sex: true,
             relationship: true,
-            gender: true,
           },
         },
       },

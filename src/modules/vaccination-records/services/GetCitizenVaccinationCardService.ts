@@ -12,10 +12,22 @@ interface IRequester {
 
 export class GetCitizenVaccinationCardService {
   async execute(citizenId: string, requester: IRequester) {
-    // RS002: apenas o próprio titular ou um profissional verificado acessa a caderneta
-    const isOwner = requester.id === citizenId;
+    const found = await prisma.user.findFirst({
+      where: { id: citizenId, role: { in: CITIZEN_ROLES }, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        birthDate: true,
+        responsibleId: true,
+        responsible: { select: { id: true, name: true } },
+      },
+    });
 
-    if (!isOwner) {
+    // RS002 / RS004: o próprio titular, o responsável pelo dependente (D33) ou um profissional verificado
+    const isOwner = requester.id === citizenId;
+    const isResponsible = found !== null && found.responsibleId === requester.id;
+
+    if (!isOwner && !isResponsible) {
       const checkVerifiedProfessionalService = new CheckVerifiedProfessionalService();
       const isVerifiedProfessional = await checkVerifiedProfessionalService.execute(requester.id);
 
@@ -24,17 +36,14 @@ export class GetCitizenVaccinationCardService {
       }
     }
 
-    const citizen = await prisma.user.findFirst({
-      where: { id: citizenId, role: { in: CITIZEN_ROLES }, isActive: true },
-      select: { id: true, name: true, birthDate: true },
-    });
-
-    if (!citizen) {
+    if (!found) {
       throw new AppError('Cidadão não encontrado.', 404);
     }
 
+    const { responsibleId: _responsibleId, ...citizen } = found;
+
     const records = await prisma.vaccinationRecord.findMany({
-      where: { userId: citizenId, dependentId: null },
+      where: { userId: citizenId },
       orderBy: [{ applicationDate: 'asc' }, { createdAt: 'asc' }],
       select: {
         id: true,

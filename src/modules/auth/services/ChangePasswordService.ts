@@ -11,7 +11,8 @@ export class ChangePasswordService {
   ): Promise<void> {
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
-    if (!user) {
+    // Dependente não tem credenciais (D33) e nunca chega aqui autenticado
+    if (!user || !user.passwordHash) {
       throw new AppError('Usuário não encontrado.', 404);
     }
 

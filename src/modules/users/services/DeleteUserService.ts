@@ -3,8 +3,9 @@ import { AppError } from '../../../errors/AppError';
 
 export class DeleteUserService {
   async execute(userId: string) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
+    // Dependentes não são contas (D33): a remoção é feita pelo responsável em /dependents
+    const user = await prisma.user.findFirst({
+      where: { id: userId, responsibleId: null },
     });
 
     if (!user) {

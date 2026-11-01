@@ -21,6 +21,7 @@ export class AuthenticateUserService {
 
     // RF002: Mensagem genérica para evitar enumeração de contas (D17).
     // Sem usuário, compara com um hash fictício para o tempo de resposta ser o mesmo.
+    // Dependentes não têm e-mail nem senha (D33), então nunca são encontrados aqui.
     const passwordMatches = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
 
     if (!user || !passwordMatches) {
