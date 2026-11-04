@@ -176,6 +176,7 @@ model PasswordResetCode {
 model Vaccine {
   id             String         @id @default(uuid())
   name           String         @unique
+  aliases        String[]       @default([]) // Siglas e nomes populares, usados no match do OCR (D34)
   description    String?
   targetAudience TargetAudience @default(CRIANCA) @map("target_audience")
   targetDisease  String         @map("target_disease") // Doenças prevenidas

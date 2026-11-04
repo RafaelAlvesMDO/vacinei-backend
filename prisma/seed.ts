@@ -787,6 +787,7 @@ async function main() {
   const vaccinesData = [
     {
       name: 'BCG',
+      aliases: ['BCG', 'BCG ID', 'BCG-ID'],
       description: 'Previne as formas graves de tuberculose (miliar e meníngea). Dose única ao nascer.',
       targetAudience: TargetAudience.CRIANCA,
       targetDisease: 'Tuberculose grave (miliar e meníngea)',
@@ -797,6 +798,7 @@ async function main() {
     },
     {
       name: 'Hepatite B',
+      aliases: ['HEPATITE B', 'HEP B', 'HEPB'],
       description: 'Previne a infecção crônica pelo vírus da Hepatite B.',
       targetAudience: TargetAudience.CRIANCA,
       targetDisease: 'Hepatite B',
@@ -807,6 +809,7 @@ async function main() {
     },
     {
       name: 'Pentavalente (DTP/HB/Hib)',
+      aliases: ['PENTAVALENTE', 'PENTA', 'DTP/HB/HIB', 'DTP HB HIB'],
       description: 'Previne Difteria, Tétano, Coqueluche, Hepatite B e infecções por Haemophilus influenzae tipo b.',
       targetAudience: TargetAudience.CRIANCA,
       targetDisease: 'Difteria, Tétano, Coqueluche, Hepatite B e Meningite por Hib',
@@ -819,6 +822,7 @@ async function main() {
     },
     {
       name: 'Poliomielite Inativada (VIP)',
+      aliases: ['VIP', 'POLIOMIELITE INATIVADA', 'POLIO INATIVADA', 'POLIOMIELITE', 'VOP', 'POLIO ORAL', 'VOPB'],
       description: 'Previne a paralisia infantil causada pelos três tipos de poliovírus.',
       targetAudience: TargetAudience.CRIANCA,
       targetDisease: 'Poliomielite (Paralisia Infantil)',
@@ -833,6 +837,7 @@ async function main() {
     },
     {
       name: 'Pneumocócica 10-Valente',
+      aliases: ['PNEUMOCOCICA 10', 'PNEUMOCOCICA 10 VALENTE', 'PNEUMOCOCICA 10V', 'PNEUMO 10', 'PNEUMO10', 'VPC10', 'PCV10', 'VPC 10'],
       description: 'Previne pneumonias, meningites e otites causadas pelos 10 sorotipos mais frequentes de pneumococos.',
       targetAudience: TargetAudience.CRIANCA,
       targetDisease: 'Pneumonia, Meningite e Otite média por Pneumococo',
@@ -845,6 +850,7 @@ async function main() {
     },
     {
       name: 'Meningocócica C Conjugada',
+      aliases: ['MENINGOCOCICA C', 'MENINGOCOCICA C CONJUGADA', 'MENINGO C', 'MENC', 'MNC'],
       description: 'Previne a doença meningocócica invasiva provocada pela Neisseria meningitidis do sorogrupo C.',
       targetAudience: TargetAudience.CRIANCA,
       targetDisease: 'Meningite Meningocócica do sorogrupo C',
@@ -857,6 +863,7 @@ async function main() {
     },
     {
       name: 'Rotavírus Humano (VRH)',
+      aliases: ['ROTAVIRUS', 'ROTAVIRUS HUMANO', 'VRH', 'VORH', 'VRH1'],
       description: 'Previne diarreia grave e desidratação associadas ao rotavírus em lactentes.',
       targetAudience: TargetAudience.CRIANCA,
       targetDisease: 'Gastroenterite por Rotavírus',
@@ -868,6 +875,7 @@ async function main() {
     },
     {
       name: 'Febre Amarela',
+      aliases: ['FEBRE AMARELA', 'F AMARELA', 'ANTIAMARILICA'],
       description: 'Previne a febre amarela silvestre e urbana transmitida por mosquitos vetores.',
       targetAudience: TargetAudience.CRIANCA,
       targetDisease: 'Febre Amarela',
@@ -879,6 +887,7 @@ async function main() {
     },
     {
       name: 'Tríplice Viral (SCR)',
+      aliases: ['SCR', 'TRIPLICE VIRAL', 'MMR', 'SARAMPO CAXUMBA RUBEOLA'],
       description: 'Previne sarampo, caxumba e rubéola.',
       targetAudience: TargetAudience.CRIANCA,
       targetDisease: 'Sarampo, Caxumba e Rubéola',
@@ -890,6 +899,7 @@ async function main() {
     },
     {
       name: 'HPV Quadrivalente',
+      aliases: ['HPV', 'HPV4', 'HPV QUADRIVALENTE', 'PAPILOMAVIRUS'],
       description: 'Previne infecções pelos tipos 6, 11, 16 e 18 do papilomavírus humano, reduzindo risco de câncer de colo de útero e verrugas genitais.',
       targetAudience: TargetAudience.ADOLESCENTE,
       targetDisease: 'Câncer de colo de útero, lesões genitais pré-cancerosas e verrugas anogenitais',
@@ -900,6 +910,7 @@ async function main() {
     },
     {
       name: 'dTpa (Tríplice Acelular do Adulto)',
+      aliases: ['DTPA', 'TRIPLICE ACELULAR', 'DTPA ADULTO'],
       description: 'Previne Difteria, Tétano e Coqueluche em gestantes, transferindo anticorpos protetores ao feto.',
       targetAudience: TargetAudience.GESTANTE,
       targetDisease: 'Coqueluche neonatal, Difteria e Tétano acidental/obstétrico',
@@ -910,12 +921,113 @@ async function main() {
     },
     {
       name: 'Influenza (Gripe)',
+      aliases: ['INFLUENZA', 'GRIPE', 'FLU'],
       description: 'Vacina anual trivalente/quadrivalente para proteção contra cepas circulantes de vírus Influenza A e B.',
       targetAudience: TargetAudience.ESPECIAL,
       targetDisease: 'Síndrome Respiratória Aguda por Influenza',
       dosesCount: 1,
       doses: [
         { doseNumber: 1, doseName: 'Dose Anual', recommendedAgeMonths: 6, description: 'Campanha de vacinação anual do SUS' },
+      ],
+    },
+    // Vacinas acrescentadas para os modelos de caderneta do OCR (D34). A situação de atraso (D32)
+    // só é calculada para vacinas com registro na caderneta; quando o esquema é variável ou o
+    // público é específico, a 1ª dose fica sem idade recomendada (como a dTpa) e nunca vence sozinha.
+    {
+      name: 'Meningocócica ACWY',
+      aliases: ['MENINGOCOCICA ACWY', 'MENINGO ACWY', 'MENACWY', 'MEN ACWY', 'ACWY'],
+      description: 'Previne a doença meningocócica causada pelos sorogrupos A, C, W e Y. Dose para adolescentes de 11 a 14 anos.',
+      targetAudience: TargetAudience.ADOLESCENTE,
+      targetDisease: 'Meningite e doença meningocócica pelos sorogrupos A, C, W e Y',
+      dosesCount: 1,
+      doses: [
+        { doseNumber: 1, doseName: 'Reforço (11 a 14 anos)', recommendedAgeMonths: 132, description: 'Dose única na adolescência, reforço de quem tomou a Meningocócica C na infância' },
+      ],
+    },
+    {
+      name: 'COVID-19',
+      aliases: ['COVID', 'COVID 19', 'COVID-19', 'COMIRNATY', 'CORONAVAC', 'SPIKEVAX'],
+      description: 'Previne as formas graves da COVID-19. O esquema varia conforme a idade, o grupo prioritário e o fabricante.',
+      targetAudience: TargetAudience.ESPECIAL,
+      targetDisease: 'COVID-19',
+      dosesCount: 3,
+      // Esquema variável: sem idade nem intervalo, fica fora do cálculo de atraso
+      doses: [
+        { doseNumber: 1, doseName: '1ª Dose', recommendedAgeMonths: null, intervalDaysFromPrevious: null },
+        { doseNumber: 2, doseName: '2ª Dose', recommendedAgeMonths: null, intervalDaysFromPrevious: null },
+        { doseNumber: 3, doseName: '3ª Dose', recommendedAgeMonths: null, intervalDaysFromPrevious: null },
+      ],
+    },
+    {
+      name: 'Dupla Adulto (dT)',
+      aliases: ['DUPLA ADULTO', 'DUPLA ADULTO DT', 'DT', 'DIFTERIA E TETANO'],
+      description: 'Previne difteria e tétano. Três doses para quem não tem esquema completo e reforço a cada 10 anos.',
+      targetAudience: TargetAudience.ADULTO,
+      targetDisease: 'Difteria e Tétano',
+      dosesCount: 4,
+      // A 1ª dose depende do histórico vacinal (sem idade); as seguintes contam a partir da anterior
+      doses: [
+        { doseNumber: 1, doseName: '1ª Dose', recommendedAgeMonths: null, intervalDaysFromPrevious: null },
+        { doseNumber: 2, doseName: '2ª Dose', recommendedAgeMonths: null, intervalDaysFromPrevious: 60 },
+        { doseNumber: 3, doseName: '3ª Dose', recommendedAgeMonths: null, intervalDaysFromPrevious: 60 },
+        { doseNumber: 4, doseName: 'Reforço', recommendedAgeMonths: null, intervalDaysFromPrevious: 3650, description: 'A cada 10 anos' },
+      ],
+    },
+    {
+      name: 'DTP (Tríplice Bacteriana)',
+      aliases: ['DTP', 'TRIPLICE BACTERIANA'],
+      description: 'Reforços contra difteria, tétano e coqueluche após o esquema da Pentavalente.',
+      targetAudience: TargetAudience.CRIANCA,
+      targetDisease: 'Difteria, Tétano e Coqueluche',
+      dosesCount: 2,
+      doses: [
+        { doseNumber: 1, doseName: '1º Reforço', recommendedAgeMonths: 15, intervalDaysFromPrevious: null },
+        { doseNumber: 2, doseName: '2º Reforço', recommendedAgeMonths: 48, intervalDaysFromPrevious: null },
+      ],
+    },
+    {
+      name: 'Tetra Viral (SCRV)',
+      aliases: ['TETRA VIRAL', 'TETRAVIRAL', 'SCRV'],
+      description: 'Previne sarampo, caxumba, rubéola e varicela.',
+      targetAudience: TargetAudience.CRIANCA,
+      targetDisease: 'Sarampo, Caxumba, Rubéola e Varicela',
+      dosesCount: 1,
+      doses: [
+        { doseNumber: 1, doseName: 'Dose Única', recommendedAgeMonths: 15, description: 'Aos 15 meses, para quem já tomou a 1ª dose da Tríplice Viral' },
+      ],
+    },
+    {
+      name: 'Varicela',
+      aliases: ['VARICELA', 'CATAPORA', 'VZ'],
+      description: 'Previne a varicela (catapora).',
+      targetAudience: TargetAudience.CRIANCA,
+      targetDisease: 'Varicela (catapora)',
+      dosesCount: 1,
+      doses: [
+        { doseNumber: 1, doseName: 'Dose Única', recommendedAgeMonths: 48, description: 'Aos 4 anos' },
+      ],
+    },
+    {
+      name: 'Hepatite A',
+      aliases: ['HEPATITE A', 'HEP A', 'HEPA'],
+      description: 'Previne a infecção pelo vírus da Hepatite A.',
+      targetAudience: TargetAudience.CRIANCA,
+      targetDisease: 'Hepatite A',
+      dosesCount: 1,
+      doses: [
+        { doseNumber: 1, doseName: 'Dose Única', recommendedAgeMonths: 15, description: 'Aos 15 meses' },
+      ],
+    },
+    {
+      name: 'Pneumocócica 23-Valente',
+      aliases: ['PNEUMOCOCICA 23', 'PNEUMOCOCICA 23 VALENTE', 'PNEUMOCOCICA 23V', 'PNEUMO 23', 'PNEUMO23', 'VPP23'],
+      description: 'Previne doenças pneumocócicas. Para povos indígenas a partir de 5 anos e grupos especiais (CRIE).',
+      targetAudience: TargetAudience.ESPECIAL,
+      targetDisease: 'Pneumonia, Meningite e Bacteremia por Pneumococo',
+      dosesCount: 1,
+      // Público específico: sem idade recomendada, fica fora do cálculo de atraso
+      doses: [
+        { doseNumber: 1, doseName: 'Dose Única', recommendedAgeMonths: null, description: 'Povos indígenas a partir de 5 anos e grupos especiais' },
       ],
     },
   ];
