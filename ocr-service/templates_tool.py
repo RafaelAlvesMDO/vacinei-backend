@@ -26,17 +26,19 @@ from textos import ascii_simples
 PASTA_TEMPLATES = Path(__file__).parent / "templates"
 
 # Layouts dos campos, em fração da caixa da célula: [x0, y0, x1, y1].
+# No modelo de Maceió, a faixa do lote começa acima da linha do FAB: na prática o lote é escrito
+# sobre ela (como no bloco do ACWY). A data de fabricação escrita no FAB pode entrar no recorte.
 # As faixas vão da linha do campo anterior até um pouco abaixo da linha do próprio campo,
 # porque a escrita à mão costuma subir e invadir o rótulo.
 LAYOUTS = {
     "maceio-fixo": {
         "descricao": "Bloco com vacina e dose impressas: data (__/__/__), FAB, LOTE, CÓD e VACINADOR",
-        "campos": {"date": [0.03, 0.15, 0.97, 0.32], "batch": [0.03, 0.42, 0.97, 0.57]},
+        "campos": {"date": [0.03, 0.15, 0.97, 0.32], "batch": [0.03, 0.33, 0.97, 0.57]},
     },
     "maceio-livre": {
         "descricao": "Bloco livre: VACINA manuscrita, data, FAB, LOTE, CÓD e VACINADOR",
         "campos": {"vaccine": [0.03, 0.14, 0.97, 0.27], "date": [0.03, 0.25, 0.97, 0.38],
-                   "batch": [0.03, 0.46, 0.97, 0.60]},
+                   "batch": [0.03, 0.39, 0.97, 0.60]},
     },
     "crianca-ms": {
         "descricao": "Célula da Caderneta da Criança: Data, Lote, Lab.Produt., Unidade e Ass.",
