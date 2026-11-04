@@ -14,10 +14,11 @@ O sistema reconhece um conjunto fechado de **modelos de caderneta**. Foto de out
 4. **Leitura:** só nas células preenchidas.
    - **Vacina e dose impressas:** vêm da posição da célula.
    - **Data e lote:** o OCR lê cada faixa do layout. A data usa whitelist de dígitos; o lote, maiúsculas e dígitos.
-   - **Blocos livres:** a vacina é lida e comparada de forma aproximada com `catalogo_vacinas.json` (cópia dos nomes e aliases do seed).
+   - **Blocos livres:** a vacina manuscrita é lida com o método da rodada 2 da PoC (`leitura_ancoras.py`, que reaproveita `ocr_formulario.py`). As âncoras vêm dos rótulos impressos; a faixa VACINA é limpa de rótulos e linhas, binarizada (Otsu e adaptativa) e lida com psm 7 e 8. O texto é comparado de forma aproximada com `catalogo_vacinas.json` (nomes e aliases do seed). Como o Tesseract é sensível à escala, o bloco é testado em algumas alturas (`OCR_VACCINE_BLOCK_HEIGHTS`, padrão 600, 700, 500 e 800 px) e a leitura para no primeiro match exato. A confiança da vacina é a do match com o catálogo: 1,0 exato, 0,9 com uma letra trocada.
+   - **Lote no modelo de Maceió:** a faixa começa acima da linha do FAB, porque na prática o lote é escrito sobre ela. A data de fabricação escrita no FAB pode entrar no recorte.
    - **Confiança:** abaixo de `OCR_MIN_CONFIDENCE` (0,45), o valor vai `null`. O recorte da foto vai sempre junto, para o cidadão conferir.
 
-> **Limitação conhecida:** o Tesseract não reconhece dígitos e letras manuscritos (medido na PoC e de novo na etapa 8). Na prática, hoje o serviço identifica o modelo e encontra as células preenchidas, mas devolve data e lote vazios com o recorte. A troca do motor de leitura (ex.: TrOCR) é melhoria futura e não muda o contrato.
+> **Limitação conhecida:** o Tesseract não reconhece dígitos manuscritos (medido na PoC e de novo na etapa 8). Na prática, hoje o serviço identifica o modelo e encontra as células preenchidas, mas devolve data e lote vazios com o recorte. Letras de forma, como a sigla da vacina, às vezes são lidas: na foto do cartão de Maceió, "ACWY" casou só nas alturas de 600 e 700 px, ou seja, é um acerto frágil. A troca do motor de leitura (ex.: TrOCR) é melhoria futura e não muda o contrato.
 
 ## Modelos (`templates/<modelo>/`)
 
@@ -103,6 +104,7 @@ Sem modelo reconhecido: `model: null` e `doses: []`. A data sai em ISO (`AAAA-MM
 | `OCR_INK_DARKNESS` | 0.28 | Escuridão mínima de um pixel de tinta à mão |
 | `OCR_MIN_CONFIDENCE` | 0.45 | Confiança mínima para sugerir um valor |
 | `OCR_CANVAS_SIDE` | 2400 | Lado maior da tela de alinhamento |
+| `OCR_VACCINE_BLOCK_HEIGHTS` | 600,700,500,800 | Alturas do bloco livre testadas na leitura da vacina |
 | `OCR_WORKERS` | 4 | Células lidas em paralelo |
 
 ## Testes com fotos reais

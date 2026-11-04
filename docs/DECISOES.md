@@ -219,7 +219,8 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
   5. **Leitura:** só das células preenchidas.
 - **Decisão (o que vem de onde):**
   - **Vacina e dose impressas no modelo:** vêm da **posição** da célula. O OCR sugere data e lote.
-  - **Blocos livres:** a vacina vem do OCR, com match aproximado no catálogo pelo nome ou pelos aliases (campo novo `Vaccine.aliases`, migration `vacinas_aliases`); se não casar, fica vazia.
+  - **Blocos livres:** a vacina vem do OCR, com match aproximado no catálogo pelo nome ou pelos aliases (campo novo `Vaccine.aliases`, migration `vacinas_aliases`); se não casar, fica vazia. A leitura reaproveita o método da rodada 2 da PoC (âncoras dos rótulos, limpeza, Otsu e adaptativa, psm 7 e 8) no bloco alinhado, testando algumas alturas do bloco.
+  - **Lote no modelo de Maceió:** a faixa do lote começa acima da linha do FAB, porque na prática o lote é escrito sobre ela.
   - **Cada campo vem com o recorte da imagem.** Com baixa confiança (< 0,45), o valor vai vazio e o cidadão preenche olhando o recorte (RF004).
 - **Decisão (catálogo):**
   - **Vacinas novas no seed:** Meningocócica ACWY (aliases ACWY, MenACWY, MENINGO ACWY), COVID-19, Dupla Adulto (dT), DTP (Tríplice Bacteriana), Tetra Viral (SCRV), Varicela, Hepatite A e Pneumocócica 23-Valente.
@@ -231,7 +232,7 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
   - **Imagem (LGPD):** processada em memória (multer `memoryStorage`) e descartada, nunca salva nem logada.
   - **Falhas:** erros com `code` (`OCR_INDISPONIVEL`, `OCR_TIMEOUT` etc.) e `manualFallback: true` quando nada foi reconhecido, para o app cair no cadastro manual.
   - **Salvamento:** pelas rotas de cadastro manual (D30), que passaram a aceitar `origin: "OCR_ICR"` e `ocrConfidence` (0–1), opcionais. O registro continua aguardando confirmação (D06).
-- **Situação medida (2026-11-04):** na foto do cartão de Maceió, o modelo é identificado (2494 inliers, alinhamento "boa") e só o bloco preenchido (ACWY) é encontrado, sem falsos positivos nos blocos manchados. Data, lote e vacina manuscritos voltam vazios: o Tesseract não os reconhece em nenhuma variação testada (altura, espessura, `por`/`eng`, caractere a caractere). A medição com fotos reais usa `avaliar_templates.py` (gabarito `X.txt` com várias doses por imagem).
+- **Situação medida (2026-11-04):** na foto do cartão de Maceió, o modelo é identificado (2494 inliers, alinhamento "boa") e só o bloco preenchido (ACWY) é encontrado, sem falsos positivos nos blocos manchados. Data e lote manuscritos voltam vazios: o Tesseract não os reconhece em nenhuma variação testada (altura, espessura, `por`/`eng`, caractere a caractere). A vacina do bloco livre é lida como "Acwy" e casa com Meningocócica ACWY, mas só nas alturas de bloco de 600 e 700 px (acerto frágil). A medição com fotos reais usa `avaliar_templates.py` (gabarito `X.txt` com várias doses por imagem).
 - **Melhorias futuras:**
   - Modelo de reconhecimento de escrita à mão (ex.: TrOCR) no lugar do Tesseract, sem mudar o contrato.
   - Mais modelos de caderneta.
