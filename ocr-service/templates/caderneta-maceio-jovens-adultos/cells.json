@@ -1,0 +1,539 @@
+{
+  "id": "caderneta-maceio-jovens-adultos",
+  "name": "Caderneta de Vacinação de Jovens e Adultos (Prefeitura de Maceió)",
+  "_comentario": "Gerado por templates_tool.py gerar-cells. box = [x, y, largura, altura] em pixels da referência; campos do layout em fração da célula [x0, y0, x1, y1]. doseNumber null = dose impressa sem correspondente no catálogo (D34).",
+  "layouts": {
+    "maceio-fixo": {
+      "descricao": "Bloco com vacina e dose impressas: data (__/__/__), FAB, LOTE, CÓD e VACINADOR",
+      "campos": {
+        "date": [
+          0.03,
+          0.15,
+          0.97,
+          0.32
+        ],
+        "batch": [
+          0.03,
+          0.42,
+          0.97,
+          0.57
+        ]
+      }
+    },
+    "maceio-livre": {
+      "descricao": "Bloco livre: VACINA manuscrita, data, FAB, LOTE, CÓD e VACINADOR",
+      "campos": {
+        "vaccine": [
+          0.03,
+          0.14,
+          0.97,
+          0.27
+        ],
+        "date": [
+          0.03,
+          0.25,
+          0.97,
+          0.38
+        ],
+        "batch": [
+          0.03,
+          0.46,
+          0.97,
+          0.6
+        ]
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "principal",
+      "reference": "reference.png",
+      "size": [
+        1545,
+        1100
+      ],
+      "cells": [
+        {
+          "id": "principal-01",
+          "box": [
+            88,
+            67,
+            151,
+            196
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "COVID-19",
+          "doseNumber": 1,
+          "doseLabel": "Primeira dose",
+          "printed": "COVID-19 · Primeira dose"
+        },
+        {
+          "id": "principal-02",
+          "box": [
+            248,
+            69,
+            148,
+            195
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "COVID-19",
+          "doseNumber": 2,
+          "doseLabel": "Segunda dose",
+          "printed": "COVID-19 · Segunda dose"
+        },
+        {
+          "id": "principal-03",
+          "box": [
+            405,
+            71,
+            146,
+            193
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "Influenza (Gripe)",
+          "doseNumber": 1,
+          "doseLabel": "Dose anual",
+          "printed": "Influenza (Gripe) · Dose anual"
+        },
+        {
+          "id": "principal-04",
+          "box": [
+            563,
+            71,
+            145,
+            194
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "Febre Amarela",
+          "doseNumber": 1,
+          "doseLabel": "Dose única",
+          "printed": "Febre Amarela · Dose única"
+        },
+        {
+          "id": "principal-05",
+          "box": [
+            858,
+            61,
+            149,
+            227
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-06",
+          "box": [
+            1013,
+            61,
+            142,
+            222
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-07",
+          "box": [
+            1165,
+            60,
+            142,
+            221
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-08",
+          "box": [
+            1319,
+            60,
+            143,
+            220
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-09",
+          "box": [
+            84,
+            306,
+            154,
+            199
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "Dupla Adulto (dT)",
+          "doseNumber": 1,
+          "doseLabel": "Primeira dose",
+          "printed": "Dupla Adulto (dT) · Primeira dose"
+        },
+        {
+          "id": "principal-10",
+          "box": [
+            248,
+            307,
+            150,
+            198
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "Dupla Adulto (dT)",
+          "doseNumber": 2,
+          "doseLabel": "Segunda dose",
+          "printed": "Dupla Adulto (dT) · Segunda dose"
+        },
+        {
+          "id": "principal-11",
+          "box": [
+            406,
+            308,
+            148,
+            198
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "Dupla Adulto (dT)",
+          "doseNumber": 3,
+          "doseLabel": "Terceira dose",
+          "printed": "Dupla Adulto (dT) · Terceira dose"
+        },
+        {
+          "id": "principal-12",
+          "box": [
+            564,
+            309,
+            146,
+            197
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "Dupla Adulto (dT)",
+          "doseNumber": 4,
+          "doseLabel": "Reforço",
+          "printed": "Dupla Adulto (dT) · Reforço"
+        },
+        {
+          "id": "principal-13",
+          "box": [
+            863,
+            295,
+            144,
+            219
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-14",
+          "box": [
+            1014,
+            294,
+            146,
+            219
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-15",
+          "box": [
+            1165,
+            293,
+            146,
+            219
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-16",
+          "box": [
+            1320,
+            291,
+            145,
+            220
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-17",
+          "box": [
+            80,
+            549,
+            157,
+            203
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "Hepatite B",
+          "doseNumber": null,
+          "doseLabel": "Primeira dose",
+          "printed": "Hepatite B · Primeira dose"
+        },
+        {
+          "id": "principal-18",
+          "box": [
+            246,
+            550,
+            152,
+            200
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "Hepatite B",
+          "doseNumber": null,
+          "doseLabel": "Segunda dose",
+          "printed": "Hepatite B · Segunda dose"
+        },
+        {
+          "id": "principal-19",
+          "box": [
+            407,
+            550,
+            148,
+            199
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "Hepatite B",
+          "doseNumber": null,
+          "doseLabel": "Terceira dose",
+          "printed": "Hepatite B · Terceira dose"
+        },
+        {
+          "id": "principal-20",
+          "box": [
+            565,
+            549,
+            147,
+            198
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "Meningocócica ACWY",
+          "doseNumber": 1,
+          "doseLabel": "Reforço",
+          "printed": "Meningo. ACWY · Reforço"
+        },
+        {
+          "id": "principal-21",
+          "box": [
+            865,
+            524,
+            146,
+            223
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-22",
+          "box": [
+            1019,
+            523,
+            146,
+            223
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-23",
+          "box": [
+            1171,
+            523,
+            146,
+            223
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-24",
+          "box": [
+            1326,
+            523,
+            147,
+            222
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-25",
+          "box": [
+            74,
+            791,
+            158,
+            208
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "Tríplice Viral (SCR)",
+          "doseNumber": 1,
+          "doseLabel": "Primeira dose",
+          "printed": "Tríplice Viral (SCR) · Primeira dose"
+        },
+        {
+          "id": "principal-26",
+          "box": [
+            241,
+            789,
+            153,
+            206
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "Tríplice Viral (SCR)",
+          "doseNumber": 2,
+          "doseLabel": "Segunda dose",
+          "printed": "Tríplice Viral (SCR) · Segunda dose"
+        },
+        {
+          "id": "principal-27",
+          "box": [
+            402,
+            787,
+            150,
+            205
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "HPV Quadrivalente",
+          "doseNumber": 1,
+          "doseLabel": "Primeira dose",
+          "printed": "HPV Quadrivalente · Primeira dose"
+        },
+        {
+          "id": "principal-28",
+          "box": [
+            565,
+            786,
+            148,
+            203
+          ],
+          "kind": "fixed",
+          "layout": "maceio-fixo",
+          "vaccine": "HPV Quadrivalente",
+          "doseNumber": null,
+          "doseLabel": "Segunda dose",
+          "printed": "HPV Quadrivalente · Segunda dose"
+        },
+        {
+          "id": "principal-29",
+          "box": [
+            868,
+            759,
+            147,
+            227
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-30",
+          "box": [
+            1023,
+            759,
+            148,
+            227
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-31",
+          "box": [
+            1176,
+            759,
+            150,
+            227
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        },
+        {
+          "id": "principal-32",
+          "box": [
+            1333,
+            758,
+            149,
+            228
+          ],
+          "kind": "free",
+          "layout": "maceio-livre",
+          "vaccine": null,
+          "doseNumber": null,
+          "doseLabel": null,
+          "printed": "Bloco livre"
+        }
+      ]
+    }
+  ]
+}

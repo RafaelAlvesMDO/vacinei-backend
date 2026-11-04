@@ -10,8 +10,14 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY poc_ocr.py ocr_formulario.py catalogo_vacinas.json ./
+COPY *.py catalogo_vacinas.json ./
+COPY templates ./templates
 
 ENV PYTHONUNBUFFERED=1
+# O Tesseract usa uma thread por chamada; o paralelismo fica no pipeline (várias células ao mesmo tempo)
+ENV OMP_THREAD_LIMIT=1
 
-CMD ["python", "poc_ocr.py", "--entrada", "/amostras", "--saida", "/saida"]
+EXPOSE 8000
+
+# Serviço HTTP (D25). A prova de conceito roda com: docker compose --profile ocr run --rm ocr
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

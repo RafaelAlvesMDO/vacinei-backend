@@ -1,0 +1,526 @@
+{
+  "id": "caderneta-crianca-ms",
+  "name": "Caderneta da Criança (Ministério da Saúde) — tabela de vacinas",
+  "_comentario": "Gerado por templates_tool.py gerar-cells. box = [x, y, largura, altura] em pixels da referência; campos do layout em fração da célula [x0, y0, x1, y1]. doseNumber null = dose impressa sem correspondente no catálogo (D34).",
+  "layouts": {
+    "crianca-ms": {
+      "descricao": "Célula da Caderneta da Criança: Data, Lote, Lab.Produt., Unidade e Ass.",
+      "campos": {
+        "date": [
+          0.02,
+          0.0,
+          0.98,
+          0.24
+        ],
+        "batch": [
+          0.02,
+          0.17,
+          0.98,
+          0.42
+        ]
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "ate-12-meses",
+      "reference": "reference-ate-12-meses.png",
+      "size": [
+        772,
+        323
+      ],
+      "cells": [
+        {
+          "id": "ate-12-meses-01",
+          "box": [
+            28,
+            58,
+            103,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "BCG",
+          "doseNumber": 1,
+          "doseLabel": "Dose única",
+          "printed": "BCG · Dose única"
+        },
+        {
+          "id": "ate-12-meses-02",
+          "box": [
+            133,
+            58,
+            104,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Hepatite B",
+          "doseNumber": 1,
+          "doseLabel": "Dose ao nascer",
+          "printed": "Hepatite B · Dose ao nascer"
+        },
+        {
+          "id": "ate-12-meses-03",
+          "box": [
+            239,
+            58,
+            104,
+            61
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Pentavalente (DTP/HB/Hib)",
+          "doseNumber": 1,
+          "doseLabel": "1ª Dose",
+          "printed": "Pentavalente (DTP/HB/Hib) · 1ª Dose"
+        },
+        {
+          "id": "ate-12-meses-04",
+          "box": [
+            345,
+            58,
+            103,
+            61
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Pentavalente (DTP/HB/Hib)",
+          "doseNumber": 2,
+          "doseLabel": "2ª Dose",
+          "printed": "Pentavalente (DTP/HB/Hib) · 2ª Dose"
+        },
+        {
+          "id": "ate-12-meses-05",
+          "box": [
+            451,
+            58,
+            103,
+            61
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Pentavalente (DTP/HB/Hib)",
+          "doseNumber": 3,
+          "doseLabel": "3ª Dose",
+          "printed": "Pentavalente (DTP/HB/Hib) · 3ª Dose"
+        },
+        {
+          "id": "ate-12-meses-06",
+          "box": [
+            557,
+            58,
+            103,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Rotavírus Humano (VRH)",
+          "doseNumber": 1,
+          "doseLabel": "1ª Dose",
+          "printed": "Rotavírus Humano (VRH) · 1ª Dose"
+        },
+        {
+          "id": "ate-12-meses-07",
+          "box": [
+            663,
+            58,
+            103,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Rotavírus Humano (VRH)",
+          "doseNumber": 2,
+          "doseLabel": "2ª Dose",
+          "printed": "Rotavírus Humano (VRH) · 2ª Dose"
+        },
+        {
+          "id": "ate-12-meses-08",
+          "box": [
+            28,
+            158,
+            103,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Pneumocócica 10-Valente",
+          "doseNumber": 1,
+          "doseLabel": "1ª Dose",
+          "printed": "Pneumocócica 10-Valente · 1ª Dose"
+        },
+        {
+          "id": "ate-12-meses-09",
+          "box": [
+            133,
+            158,
+            104,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Pneumocócica 10-Valente",
+          "doseNumber": 2,
+          "doseLabel": "2ª Dose",
+          "printed": "Pneumocócica 10-Valente · 2ª Dose"
+        },
+        {
+          "id": "ate-12-meses-10",
+          "box": [
+            239,
+            158,
+            104,
+            61
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Poliomielite Inativada (VIP)",
+          "doseNumber": 1,
+          "doseLabel": "1ª Dose",
+          "printed": "Poliomielite Inativada (VIP) · 1ª Dose"
+        },
+        {
+          "id": "ate-12-meses-11",
+          "box": [
+            345,
+            158,
+            104,
+            61
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Poliomielite Inativada (VIP)",
+          "doseNumber": 2,
+          "doseLabel": "2ª Dose",
+          "printed": "Poliomielite Inativada (VIP) · 2ª Dose"
+        },
+        {
+          "id": "ate-12-meses-12",
+          "box": [
+            451,
+            158,
+            103,
+            61
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Poliomielite Inativada (VIP)",
+          "doseNumber": 3,
+          "doseLabel": "3ª Dose",
+          "printed": "Poliomielite Inativada (VIP) · 3ª Dose"
+        },
+        {
+          "id": "ate-12-meses-13",
+          "box": [
+            557,
+            158,
+            103,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Meningocócica C Conjugada",
+          "doseNumber": 1,
+          "doseLabel": "1ª Dose",
+          "printed": "Meningocócica C Conjugada · 1ª Dose"
+        },
+        {
+          "id": "ate-12-meses-14",
+          "box": [
+            663,
+            158,
+            103,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Meningocócica C Conjugada",
+          "doseNumber": 2,
+          "doseLabel": "2ª Dose",
+          "printed": "Meningocócica C Conjugada · 2ª Dose"
+        },
+        {
+          "id": "ate-12-meses-15",
+          "box": [
+            28,
+            258,
+            103,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Febre Amarela",
+          "doseNumber": 1,
+          "doseLabel": "Dose",
+          "printed": "Febre Amarela · Dose"
+        },
+        {
+          "id": "ate-12-meses-16",
+          "box": [
+            133,
+            258,
+            104,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Tríplice Viral (SCR)",
+          "doseNumber": 1,
+          "doseLabel": "1ª Dose",
+          "printed": "Tríplice Viral (SCR) · 1ª Dose"
+        },
+        {
+          "id": "ate-12-meses-17",
+          "box": [
+            239,
+            257,
+            104,
+            61
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "COVID-19",
+          "doseNumber": 1,
+          "doseLabel": "1ª Dose",
+          "printed": "COVID-19 · 1ª Dose"
+        },
+        {
+          "id": "ate-12-meses-18",
+          "box": [
+            345,
+            257,
+            104,
+            61
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "COVID-19",
+          "doseNumber": 2,
+          "doseLabel": "2ª Dose",
+          "printed": "COVID-19 · 2ª Dose"
+        },
+        {
+          "id": "ate-12-meses-19",
+          "box": [
+            451,
+            257,
+            103,
+            61
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "COVID-19",
+          "doseNumber": 3,
+          "doseLabel": "3ª Dose",
+          "printed": "COVID-19 · 3ª Dose"
+        }
+      ]
+    },
+    {
+      "id": "a-partir-12-meses",
+      "reference": "reference-a-partir-12-meses.png",
+      "size": [
+        772,
+        230
+      ],
+      "cells": [
+        {
+          "id": "a-partir-12-meses-01",
+          "box": [
+            29,
+            53,
+            103,
+            61
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Pneumocócica 10-Valente",
+          "doseNumber": 3,
+          "doseLabel": "Reforço",
+          "printed": "Pneumocócica 10-Valente · Reforço"
+        },
+        {
+          "id": "a-partir-12-meses-02",
+          "box": [
+            134,
+            54,
+            104,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Meningocócica C Conjugada",
+          "doseNumber": 3,
+          "doseLabel": "Reforço",
+          "printed": "Meningocócica C Conjugada · Reforço"
+        },
+        {
+          "id": "a-partir-12-meses-03",
+          "box": [
+            240,
+            54,
+            104,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "DTP (Tríplice Bacteriana)",
+          "doseNumber": 1,
+          "doseLabel": "1º Reforço",
+          "printed": "DTP (Tríplice Bacteriana) · 1º Reforço"
+        },
+        {
+          "id": "a-partir-12-meses-04",
+          "box": [
+            346,
+            54,
+            103,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "DTP (Tríplice Bacteriana)",
+          "doseNumber": 2,
+          "doseLabel": "2º Reforço",
+          "printed": "DTP (Tríplice Bacteriana) · 2º Reforço"
+        },
+        {
+          "id": "a-partir-12-meses-05",
+          "box": [
+            452,
+            54,
+            103,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Poliomielite Inativada (VIP)",
+          "doseNumber": 4,
+          "doseLabel": "1º Reforço",
+          "printed": "VOP · 1º Reforço"
+        },
+        {
+          "id": "a-partir-12-meses-06",
+          "box": [
+            558,
+            53,
+            103,
+            61
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Poliomielite Inativada (VIP)",
+          "doseNumber": 5,
+          "doseLabel": "2º Reforço",
+          "printed": "VOP · 2º Reforço"
+        },
+        {
+          "id": "a-partir-12-meses-07",
+          "box": [
+            664,
+            54,
+            103,
+            59
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Tetra Viral (SCRV)",
+          "doseNumber": 1,
+          "doseLabel": "Uma dose",
+          "printed": "Tetra Viral (SCRV) · Uma dose"
+        },
+        {
+          "id": "a-partir-12-meses-08",
+          "box": [
+            29,
+            165,
+            103,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Varicela",
+          "doseNumber": 1,
+          "doseLabel": "Uma dose",
+          "printed": "Varicela · Uma dose"
+        },
+        {
+          "id": "a-partir-12-meses-09",
+          "box": [
+            134,
+            165,
+            104,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Febre Amarela",
+          "doseNumber": 2,
+          "doseLabel": "Dose de reforço",
+          "printed": "Febre Amarela · Dose de reforço"
+        },
+        {
+          "id": "a-partir-12-meses-10",
+          "box": [
+            240,
+            165,
+            104,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Hepatite A",
+          "doseNumber": 1,
+          "doseLabel": "Uma dose",
+          "printed": "Hepatite A · Uma dose"
+        },
+        {
+          "id": "a-partir-12-meses-11",
+          "box": [
+            346,
+            165,
+            103,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "HPV Quadrivalente",
+          "doseNumber": 1,
+          "doseLabel": "Dose",
+          "printed": "HPV Quadrivalente · Dose"
+        },
+        {
+          "id": "a-partir-12-meses-12",
+          "box": [
+            452,
+            165,
+            103,
+            60
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "HPV Quadrivalente",
+          "doseNumber": null,
+          "doseLabel": "Dose",
+          "printed": "HPV Quadrivalente · Dose"
+        },
+        {
+          "id": "a-partir-12-meses-13",
+          "box": [
+            558,
+            164,
+            103,
+            61
+          ],
+          "kind": "fixed",
+          "layout": "crianca-ms",
+          "vaccine": "Pneumocócica 23-Valente",
+          "doseNumber": 1,
+          "doseLabel": "Uma dose",
+          "printed": "Pneumocócica 23V (povos indígenas) · Uma dose"
+        }
+      ]
+    }
+  ]
+}
