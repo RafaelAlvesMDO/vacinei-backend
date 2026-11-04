@@ -144,6 +144,19 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Implementação:** a regra fica no backend (D01), em `calculateAlertStatus` (`CalculateVaccineStatusService`), usada pela caderneta (campo `alert`), pelo `/overdue` e pelo `/summary`. O `status` da caderneta continua o do esquema (todo registro conta como aplicado), porque é a base da próxima dose e da data prevista.
 - **Motivo:** o registro do cidadão não pode encerrar o alerta (nota 7), mas tratá-lo como atraso inflaria os números: no seed, 78 doses aguardam conferência e só 18 vacinas estão de fato atrasadas, e as vacinas só com registros pendentes passariam a contar o atraso desde o nascimento. Separar os grupos dá ao profissional duas ações distintas: procurar quem não tomou a dose e conferir quem já informou.
 - **Requisito:** RF007 (nota 7), RF009, RF010; D06, D21.
+- **Ajuste (2026-11-04, D35):** as três situações valem só para vacinas com pelo menos um registro na caderneta (esquema iniciado). Vacina nunca iniciada não gera alerta nem aparece na caderneta.
+
+### D35 — Alerta de atraso só para esquemas iniciados
+- **Decisão:** o alerta de atraso (`ATRASADA`, D32) vale para **esquemas iniciados**, ou seja, para as doses seguintes de uma vacina que já tem registro na caderneta (confirmado ou aguardando conferência). Vacina **nunca iniciada** não gera alerta e não aparece na caderneta.
+  - **Pontos que seguem a regra:** caderneta (`GET /citizens/:id/vaccination-records` e `/dependents/:id/vaccination-records`), `/dashboard/summary`, `/dashboard/overdue` e alertas do app. Todos já calculam a situação a partir dos registros (`calculateAlertStatus`), então continuam mostrando a mesma coisa.
+  - **Vacinas novas do catálogo (D34):** Varicela, Hepatite A, Dupla Adulto, DTP, Tetra Viral, Meningocócica ACWY, COVID-19 e Pneumocócica 23V só aparecem para quem tem registro delas. Exemplo: no seed, a cidadã `cidadao03` (bebê de 9 meses) continua com as mesmas 6 vacinas na caderneta.
+- **Alternativa avaliada e descartada:** avaliar também as vacinas nunca iniciadas contra uma janela de idade simplificada para iniciar o esquema.
+  - **Impacto no seed:** +34 vacinas atrasadas em 14 pessoas. A D32 ao pé da letra, sem janela, daria +359.
+  - **Por que não:** as janelas simplificadas não valem para adultos (ex.: Tríplice Viral e Febre Amarela até 59 anos, Hepatite B em qualquer idade). Além disso, a mudança mexeria na caderneta, no dashboard e na busca ativa do back, do web e do app às vésperas do congelamento.
+- **Limitação:** a criança que nunca tomou uma vacina do calendário (ex.: Meningocócica C aos 3 meses) não recebe alerta dela; só das doses seguintes das vacinas que já começou.
+- **Melhoria futura:** avaliar as vacinas nunca iniciadas contra o calendário do PNI, com janelas de idade por vacina e por público (criança, adolescente, adulto, gestante, idoso), conferidas com a nota técnica vigente.
+- **Motivo:** sem janelas de idade confiáveis, alertar vacinas nunca iniciadas geraria falsos atrasos em massa, principalmente para adultos, e inflaria o dashboard e a busca ativa. Limitar o alerta aos esquemas iniciados mantém a regra previsível e coerente nos três clientes.
+- **Requisito:** RF006, RF007, RF009; D32, D34.
 
 ## Catálogo
 
@@ -225,14 +238,14 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Decisão (catálogo):**
   - **Vacinas novas no seed:** Meningocócica ACWY (aliases ACWY, MenACWY, MENINGO ACWY), COVID-19, Dupla Adulto (dT), DTP (Tríplice Bacteriana), Tetra Viral (SCRV), Varicela, Hepatite A e Pneumocócica 23-Valente.
   - **Fora do cálculo de atraso (D32):** COVID-19 (esquema variável) e Pneumocócica 23V (público específico) ficam sem idade recomendada e sem intervalo, como a dTpa, então nunca vencem sozinhas. A 1ª dose da dT depende do histórico (sem idade); as seguintes contam a partir da anterior.
-  - **Atraso só com registro:** a situação de atraso é calculada só para vacinas com registro na caderneta, então as vacinas novas não inflam o dashboard nem a busca ativa. Conferido no seed (referência 04/11/2026): 23 vacinas atrasadas (11 pessoas) e 77 doses aguardando conferência (30 pessoas), antes e depois.
+  - **Atraso só com registro (D35):** a situação de atraso é calculada só para vacinas com registro na caderneta, então as vacinas novas não inflam o dashboard nem a busca ativa. Conferido no seed (referência 04/11/2026): 23 vacinas atrasadas (11 pessoas) e 77 doses aguardando conferência (30 pessoas), antes e depois.
   - **Doses impressas sem correspondente:** não foram criadas doses novas. Hepatite B 1ª/2ª/3ª do adulto e a 2ª dose do HPV voltam com `doseId: null` e o cidadão escolhe a dose na revisão. Febre Amarela "Dose única"/"Dose" → 1ª Dose; VOP 1º/2º Reforço → doses 4 e 5 da VIP ("1º/2º Reforço (VOP/VIP)").
 - **Decisão (API):**
   - **`POST /vaccination-records/ocr`:** autenticado, `CIDADAO`/`PROFISSIONAL_SAUDE`. Recebe multipart com uma imagem JPEG/PNG de até 8 MB, encaminha ao serviço com timeout de 20 s e devolve só sugestões com `vaccineId`/`doseId` do catálogo. **Não cria registros.** Serve para o titular e para os dependentes.
   - **Imagem (LGPD):** processada em memória (multer `memoryStorage`) e descartada, nunca salva nem logada.
   - **Falhas:** erros com `code` (`OCR_INDISPONIVEL`, `OCR_TIMEOUT` etc.) e `manualFallback: true` quando nada foi reconhecido, para o app cair no cadastro manual.
   - **Salvamento:** pelas rotas de cadastro manual (D30), que passaram a aceitar `origin: "OCR_ICR"` e `ocrConfidence` (0–1), opcionais. O registro continua aguardando confirmação (D06).
-- **Situação medida (2026-11-04):** na foto do cartão de Maceió, o modelo é identificado (2494 inliers, alinhamento "boa") e só o bloco preenchido (ACWY) é encontrado, sem falsos positivos nos blocos manchados. Data e lote manuscritos voltam vazios: o Tesseract não os reconhece em nenhuma variação testada (altura, espessura, `por`/`eng`, caractere a caractere). A vacina do bloco livre é lida como "Acwy" e casa com Meningocócica ACWY, mas só nas alturas de bloco de 600 e 700 px (acerto frágil). A medição com fotos reais usa `avaliar_templates.py` (gabarito `X.txt` com várias doses por imagem).
+- **Situação medida (2026-11-04):** na foto do cartão de Maceió, o modelo é identificado (2494 inliers, alinhamento "boa") e só o bloco preenchido (ACWY) é encontrado, sem falsos positivos nos blocos manchados. Data e lote manuscritos voltam vazios: o Tesseract não os reconhece em nenhuma variação testada (altura, espessura, `por`/`eng`, caractere a caractere). A vacina do bloco livre (ACWY) só casou com o catálogo porque a leitura testa várias alturas do bloco (600, 700, 500 e 800 px). Aplicado sem mudanças ao bloco alinhado (cerca de 340 px de altura), o método da rodada 2 leu "PCcwy"/"PreWy". O acerto veio em 600 px ("Acwy", exato) e em 700 px ("Pcwy", com uma letra de diferença), e falhou em 550, 650, 750, 800 e 850 px. É um **acerto pontual e frágil**: não demonstra que a vacina manuscrita é lida de forma confiável. A medição com fotos reais usa `avaliar_templates.py` (gabarito `X.txt` com várias doses por imagem).
 - **Melhorias futuras:**
   - Modelo de reconhecimento de escrita à mão (ex.: TrOCR) no lugar do Tesseract, sem mudar o contrato.
   - Mais modelos de caderneta.
