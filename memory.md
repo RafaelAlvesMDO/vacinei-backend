@@ -8,7 +8,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 
 - **Fase Atual:** Fase 2 - CRUDs Essenciais e Autenticação (Foco Pré-Banca: 15 de Outubro de 2026)
 - **Status:** 
-  - **Script de Seeds (`prisma/seed.ts`) implementado e executado com sucesso:** 12 vacinas do SUS com esquema completo de doses, 34 UBSs reais de Maceió/AL com georreferenciamento cobrindo os 8 Distritos Sanitários (CNES, logradouro, bairro, CEP, telefone e coordenadas conferidos com o CNES/DATASUS 2026.09; 4 coordenadas erradas no próprio CNES conferidas manualmente no Google Maps, ver D28) e usuários de teste (Admin, Profissional de Saúde e Cidadão com dependentes).
+  - **Script de Seeds (`prisma/seed.ts`) implementado e executado com sucesso:** 20 vacinas do SUS com esquema completo de doses e aliases (8 acrescentadas para o OCR, D34), 34 UBSs reais de Maceió/AL com georreferenciamento cobrindo os 8 Distritos Sanitários (CNES, logradouro, bairro, CEP, telefone e coordenadas conferidos com o CNES/DATASUS 2026.09; 4 coordenadas erradas no próprio CNES conferidas manualmente no Google Maps, ver D28) e usuários de teste (Admin, Profissional de Saúde e Cidadão com dependentes).
   - **Infraestrutura de Autenticação e Segurança ativa:** `bcryptjs` para hash de senhas, `jsonwebtoken` para access tokens (15m), refresh tokens opacos (30 dias) persistidos no PostgreSQL, middlewares `ensureAuthenticated` e `checkRole` (RBAC).
   - **CRUD de Contas/Usuários (`src/modules/users`):** Cadastro público (Cidadão e Profissional de Saúde com validação de conselho), consulta de perfil (`/users/me`), busca por ID, listagem paginada (ADMIN), atualização e desativação lógica.
   - **CRUD de Vacinas (`src/modules/vaccines`):** Listagem com busca textual e público-alvo, detalhes por ID com doses ordenadas, criação, atualização e desativação segura protegidas por RBAC.
@@ -20,7 +20,13 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
   - **Contrato da API:** `docs/API.md` com todos os endpoints, perfis de acesso, bodies, respostas, erros e logins do seed.
   - **Seed com dados de dashboard:** 25 cidadãos (`cidadao01..25@vacinei.com.br`), 142 registros nos últimos 12 meses com mistura de em dia, atrasados e completos; profissional não verificado `paulo.ribeiro@vacinei.com.br` para testar o 403. Senha de todos: `Vacinei@2026` (RF001).
   - **Prova de conceito do OCR (`ocr-service/`, RF004/D25):** container Python (OpenCV + pytesseract `por`) no perfil `ocr` do compose, ainda sem integração com API/app. Processa uma pasta de fotos (`OCR_SAMPLES_DIR`, somente leitura) e grava etapas e relatórios em `OCR_OUTPUT_DIR`, ambas fora do repo. Extrai data, lote e vacina (catálogo do seed + vacinas conhecidas fora dele, ex.: ACWY) e compara com `gabarito.txt`. Rodada 2 (2026-11-01) acrescentou a leitura por campo com âncoras (`ocr_formulario.py`): detecta blocos do cartão, usa os rótulos impressos como âncoras e lê cada faixa isolada. Na foto real (letra à mão): página inteira 0/2, âncoras 1/2. A vacina (ACWY) e o código (`V:OPIL…`) saem quase certos; a data e os dígitos manuscritos não são reconhecidos pelo Tesseract, nem com whitelist, nem com outra escala, nem com o modelo `eng` ou a leitura por caractere. Escopo a discutir: OCR sugere e o cidadão confirma (RF004).
-- **Data da Última Atualização:** 2026-11-01
+  - **OCR integrado (etapa 8, RF004/RNF05/RNF12, D25/D34, 2026-11-04):**
+    - **Serviço:** FastAPI `ocr-api` no compose (porta 8000), com OCR por **modelos de caderneta** (`ocr-service/templates/<modelo>/`: `reference*.png` em branco + `cells.json`). Modelos: `caderneta-crianca-ms` (2 páginas, 19+13 células) e `caderneta-maceio-jovens-adultos` (16 blocos impressos + 16 livres).
+    - **Pipeline:** SIFT + RANSAC identifica a página e a homografia alinha a foto. Cada célula é reajustada localmente; a tinta à mão (escura, fora da impressão da referência, sem cor de mancha) separa vazias de preenchidas; o Tesseract lê data e lote (e a vacina nos blocos livres). Vacina e dose impressas vêm da posição.
+    - **Backend (`POST /vaccination-records/ocr`):** multer em memória, `OcrProvider` com timeout de 20 s e conversão para `vaccineId`/`doseId` pelo nome e pelos `aliases` do catálogo. Não grava registros: o app salva pelas rotas manuais com `origin: OCR_ICR`. Erros com `code` para o app cair no cadastro manual.
+    - **Medido na foto do cartão de Maceió:** modelo identificado (2494 inliers, alinhamento "boa"), só o bloco ACWY encontrado e zero falsos positivos nos blocos manchados. Data e lote manuscritos voltam vazios, com recorte: o Tesseract não reconhece escrita à mão.
+    - **Avaliação com fotos reais:** `avaliar_templates.py` (gabarito `X.txt` por imagem, com várias doses). A PoC antiga (`poc_ocr.py`, perfil `ocr`) continua funcionando.
+- **Data da Última Atualização:** 2026-11-04
 
 ---
 
@@ -85,6 +91,13 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
    - `/users` (admin) ignora dependentes (`responsibleId: null`).
    - `prisma migrate dev` recusa rodar em terminal não interativo quando há aviso de perda de dados; nesta etapa a tabela `dependents` (só seed) foi esvaziada antes para a migration rodar sem prompt.
    - Seed: `cidadao02` (João Pedro) passou de bebê para adulto para ser responsável; dependentes para cidadao01 (3), cidadao02 (2) e Carlos (2).
+11. **OCR por modelos de caderneta (2026-11-04, D34):**
+   - Migration `20261104200438_vacinas_aliases`: `Vaccine.aliases String[]` (siglas e nomes populares para o match do OCR).
+   - Seed: 8 vacinas novas (Meningocócica ACWY, COVID-19, Dupla Adulto (dT), DTP, Tetra Viral, Varicela, Hepatite A e Pneumocócica 23V), 20 no total. COVID-19 e Pneumo 23V ficam sem idade e sem intervalo, fora do cálculo de atraso como a dTpa.
+   - Contagens do dashboard iguais antes e depois (23 atrasadas em 11 pessoas, 77 aguardando conferência em 30 pessoas), porque o atraso só é calculado para vacinas com registro.
+   - Doses impressas sem correspondente no catálogo voltam com `doseId: null` (Hep B do adulto, HPV 2ª dose). FA "Dose única" → 1ª Dose; VOP 1º/2º reforço → VIP doses 4 e 5.
+   - `AppError` ganhou `code` opcional, devolvido pelo `errorHandler`, que também trata `MulterError` (413/400).
+   - O `.gitignore` libera só `ocr-service/templates/*/reference*.png`. A referência de Maceió foi gerada da foto com o bloco preenchido apagado (`templates_tool.py referencia-maceio`).
 
 ---
 
@@ -138,6 +151,7 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
 
 ### 4.5. Caderneta e Confirmação Presencial (`/vaccination-records`, `/citizens`)
 - `POST /vaccination-records`: Cadastro manual na própria caderneta (`CIDADAO`/`PROFISSIONAL_SAUDE`, titular do token). Origem `MANUAL`, `status` `EM_DIA` = aguardando confirmação (D30); 409 se a dose já existir.
+- `POST /vaccination-records/ocr`: Leitura da caderneta por foto (multipart `image`). Devolve sugestões de doses com recortes, sem gravar (RF004/D34). O salvamento usa o cadastro manual com `origin: OCR_ICR` e `ocrConfidence` opcionais.
 - `PUT` / `DELETE /vaccination-records/:id`: Edição/exclusão pelo titular só enquanto não `CONFIRMADO` (403 se confirmado ou de terceiro).
 - `POST /vaccination-records/confirm`: Confirmação presencial de dose (profissional verificado). `confirmedAt` = agora, profissional = sessão; registro existente mantém a `applicationDate` original. Cria registro `SISTEMA_PRESENCIAL`/`CONFIRMADO` ou promove registro manual/OCR existente a `CONFIRMADO` (RF007 nota 7); 409 se já confirmado.
 - `GET /citizens?search=`: Busca de cidadão por CPF exato (termo com 11 dígitos, com ou sem máscara) ou por nome via `unaccent` + `ILIKE` (profissional verificado), CPF mascarado, até 20 resultados.
@@ -173,5 +187,6 @@ Contrato completo de todos os endpoints: `docs/API.md`.
 - [x] **Módulo de Dependentes (`src/modules/dependents`):** CRUD, caderneta e registro manual do dependente pelo responsável (RF012/RS004/RS008, D33). Futuro: dependente assumir a própria conta, transferência aos 18 anos, mais de um responsável.
 - [x] **Módulo de Caderneta e Registro de Aplicações (`src/modules/vaccination-records`):** Registro de aplicação presencial por profissional (RS006/RF010) e cálculo dos status da caderneta (`EM_DIA`, `ATRASADA`, `COMPLETA`).
 - [x] **Dashboard do Profissional (`src/modules/dashboard`):** Indicadores, últimas doses e série mensal (RF009/RS005), incluindo dependentes (D33).
+- [x] **OCR da caderneta (`ocr-service` + `POST /vaccination-records/ocr`):** modelos de caderneta, identificação, alinhamento e células preenchidas (D34). Futuro: motor de escrita à mão (TrOCR), mais modelos, carimbos e etiquetas, esquemas por faixa etária.
 - [x] **Verificação de Profissionais (`src/modules/professionals`):** Aprovação/recusa manual pelo ADMIN (RS001).
 - [ ] **Coleção de Requisições / Documentação de Teste:** Contrato pronto em `docs/API.md`; falta a coleção Insomnia/Postman/cURL para demonstrar na banca.

@@ -22,7 +22,7 @@ Dependentes não fazem login: o responsável acessa os dados deles em `/dependen
 
 - **Auth:** header `Authorization: Bearer <token>`. O access token vale 15 min. Para renovar, use `POST /auth/refresh`.
 - **Sucesso:** `{ "status": "success", "data": ... }`. Algumas rotas respondem `{ "status": "success", "message": "..." }`.
-- **Erro:** `{ "status": "error", "message": "..." }`.
+- **Erro:** `{ "status": "error", "message": "..." }`. Algumas rotas incluem `code`, um código estável para o cliente tratar o erro sem depender do texto (ex.: `OCR_TIMEOUT`).
 - **Erro de validação (400):** inclui `issues` com os erros por campo (formato `ZodError.format()`).
 - **Erros comuns a toda rota autenticada:**
   - `401`: token ausente, inválido ou expirado, ou usuário desativado (o bloqueio vale na hora, mesmo com token ainda no prazo).
@@ -250,10 +250,12 @@ No registro, `status` diferente de `CONFIRMADO` (hoje sempre `EM_DIA`) significa
 
 ### POST `/vaccination-records` (cadastro manual, RF005)
 - **Acesso:** `CIDADAO` ou `PROFISSIONAL_SAUDE` (verificado ou não). O registro vai sempre para a caderneta do usuário logado (id do token).
-- **Body:** `{ vaccineId, doseId, applicationDate, lote? }`.
+- **Body:** `{ vaccineId, doseId, applicationDate, lote?, origin?, ocrConfidence? }`.
   - `applicationDate`: `YYYY-MM-DD` ou ISO 8601. Não pode ser futura nem anterior à data de nascimento do usuário.
   - `lote`: opcional. Mesma regra do confirm: de 1 a 20 caracteres alfanuméricos, salvo em maiúsculas.
-- **201:** `data: { record: { id, userId, status: "EM_DIA", origin: "MANUAL", applicationDate, lotNumber, dose: { id, doseNumber, doseName, vaccine: { id, name } }, createdAt, updatedAt }, vaccineStatus }`. O registro aparece na caderneta e no dashboard aguardando confirmação. Quando confirmado em `/confirm`, a resposta traz `action: "CONFIRMED_EXISTING"`.
+  - `origin`: opcional, `"MANUAL"` (padrão) ou `"OCR_ICR"`. Use `"OCR_ICR"` ao salvar uma dose sugerida por `POST /vaccination-records/ocr` e conferida pelo cidadão (D34). As regras são as mesmas e o registro também fica aguardando confirmação.
+  - `ocrConfidence`: opcional, número de 0 a 1 (o `ocrConfidence` da sugestão). Só é gravado com `origin: "OCR_ICR"`.
+- **201:** `data: { record: { id, userId, status: "EM_DIA", origin, ocrConfidence, applicationDate, lotNumber, dose: { id, doseNumber, doseName, vaccine: { id, name } }, createdAt, updatedAt }, vaccineStatus }`. O registro aparece na caderneta e no dashboard aguardando confirmação. Quando confirmado em `/confirm`, a resposta traz `action: "CONFIRMED_EXISTING"`.
 - **Erros:**
   - `400`: validação, data futura ou anterior ao nascimento, ou a dose não pertence à vacina.
   - `401`.
@@ -263,7 +265,7 @@ No registro, `status` diferente de `CONFIRMADO` (hoje sempre `EM_DIA`) significa
 
 ### PUT `/vaccination-records/:id` (edição pelo titular)
 - **Acesso:** mesmo do `POST`. Só o titular, e só enquanto o registro não estiver `CONFIRMADO`.
-- **Body:** o mesmo do `POST`. A edição substitui o registro: se o `lote` for omitido, ele fica nulo.
+- **Body:** o mesmo do `POST`. A edição substitui o registro: se o `lote` for omitido, ele fica nulo. `origin` e `ocrConfidence` só mudam se `origin` for enviado. Ex.: enviar `"MANUAL"` ao editar uma dose vinda do OCR limpa o `ocrConfidence`.
 - **200:** mesmo formato do `POST`.
 - **Erros:**
   - `400`, `401`.
@@ -275,6 +277,87 @@ No registro, `status` diferente de `CONFIRMADO` (hoje sempre `EM_DIA`) significa
 - **Acesso e regras:** mesmos do `PUT`.
 - **204:** sem corpo.
 - **Erros:** `400` (id não é UUID), `401`, `403` (mesmas mensagens do `PUT`), `404`.
+
+### POST `/vaccination-records/ocr` (leitura da caderneta por foto, RF004)
+Lê a foto de uma caderneta física e **sugere** as doses. **Não cria registros**: o cidadão confere cada sugestão e salva pelas rotas de cadastro manual, com `origin: "OCR_ICR"` (D34). Serve para a caderneta do titular e para a dos dependentes, porque a rota de salvamento é que define de quem é a dose.
+
+- **Acesso:** `CIDADAO` ou `PROFISSIONAL_SAUDE`.
+- **Requisição:** `multipart/form-data` com **um** arquivo no campo `image`. Aceita JPEG ou PNG de até 8 MB (`OCR_MAX_IMAGE_MB`).
+  - **O que fotografar:** a página inteira (ou as duas páginas abertas), de frente, com luz uniforme e sem cortar as bordas da tabela.
+  - **LGPD:** a imagem é processada em memória e descartada. Nunca é salva nem registrada em log.
+  - **Tempo:** o backend espera o serviço de OCR por até 20 s (`OCR_TIMEOUT_MS`). Hoje leva de 2 a 5 s.
+- **Modelos reconhecidos (D34):**
+
+  | `model.id` | Caderneta |
+  | :--- | :--- |
+  | `caderneta-crianca-ms` | Caderneta da Criança (Ministério da Saúde): tabelas "até 12 meses" e "a partir de 12 meses" |
+  | `caderneta-maceio-jovens-adultos` | Caderneta de Vacinação de Jovens e Adultos (Prefeitura de Maceió): blocos impressos e 16 blocos livres |
+
+- **200:**
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "model": { "id": "caderneta-maceio-jovens-adultos", "name": "Caderneta de Vacinação de Jovens e Adultos (Prefeitura de Maceió)" },
+      "manualFallback": false,
+      "fallbackReason": null,
+      "alignment": [{ "page": "principal", "quality": "BOA" }],
+      "cellsChecked": 32,
+      "doses": [
+        {
+          "cellId": "principal-20",
+          "kind": "FIXED",
+          "printedLabel": "Meningo. ACWY · Reforço",
+          "vaccine": { "id": "a2894ebb-…", "name": "Meningocócica ACWY", "source": "TEMPLATE", "confidence": 1, "crop": null },
+          "dose": { "id": "5d1c…", "doseNumber": 1, "name": "Reforço (11 a 14 anos)", "printedLabel": "Reforço" },
+          "applicationDate": { "value": "2026-01-31", "confidence": 0.82, "crop": "data:image/png;base64,iVBORw0…" },
+          "lote": { "value": null, "confidence": 0.21, "crop": "data:image/png;base64,iVBORw0…" },
+          "cellCrop": "data:image/png;base64,iVBORw0…",
+          "ocrConfidence": 0.82
+        }
+      ]
+    }
+  }
+  ```
+- **Campos de `data`:**
+  - **`model`:** modelo reconhecido, ou `null`.
+  - **`manualFallback`:** `true` quando não há nada para revisar. O app deve oferecer o cadastro manual.
+  - **`fallbackReason`:** `"MODELO_NAO_RECONHECIDO"` (foto de outro modelo, ruim ou cortada: `model: null`), `"NENHUMA_DOSE_ENCONTRADA"` (modelo reconhecido, mas nenhuma célula preenchida) ou `null`.
+  - **`alignment[]`:** qualidade do alinhamento de cada página reconhecida (`BOA`, `RAZOAVEL`, `BAIXA`). Com `BAIXA`, vale sugerir uma nova foto.
+  - **`cellsChecked`:** quantas células do modelo apareceram na foto e foram verificadas.
+  - **`doses[]`:** uma sugestão por célula preenchida, na ordem da caderneta.
+- **Campos de cada dose:**
+  - **`cellId` / `printedLabel`:** posição no modelo e o que está impresso nela. Em bloco livre, `"Bloco livre"`.
+  - **`kind`:** `"FIXED"` (vacina e dose impressas) ou `"FREE"` (bloco em que a vacina é escrita à mão).
+  - **`vaccine`:** `{ id, name, source, confidence, crop }`.
+    - Em `FIXED`, vem da posição da célula (`source: "TEMPLATE"`, `confidence: 1`, `crop: null`).
+    - Em `FREE`, vem do OCR (`source: "OCR"`) com o recorte do campo VACINA. Se não casar com nenhuma vacina do catálogo, `id` e `name` são `null`.
+  - **`dose`:** `{ id, doseNumber, name, printedLabel }`. `id` é o `doseId` do catálogo. Fica `null` quando a dose impressa não tem correspondente no catálogo (ex.: Hepatite B 2ª dose do adulto, HPV 2ª dose) e sempre em `FREE`. Nesses casos, o cidadão escolhe a dose na revisão.
+  - **`applicationDate`:** `{ value, confidence, crop }`. `value` em `YYYY-MM-DD`, ou `null` se a leitura teve baixa confiança, não é uma data válida ou é futura.
+  - **`lote`:** `{ value, confidence, crop }`. `value` em maiúsculas (1 a 20 alfanuméricos), ou `null` na mesma situação.
+  - **`cellCrop`:** recorte da célula inteira.
+  - **`ocrConfidence`:** menor confiança (0 a 1) entre os campos que o OCR de fato sugeriu; `0` se não sugeriu nenhum. Envie esse valor ao salvar com `origin: "OCR_ICR"`.
+  - **Recortes (`crop`, `cellCrop`):** PNG em escala de cinza, como data URI (`data:image/png;base64,...`), pronto para `<Image source={{ uri }} />`.
+- **Fluxo no app:**
+  1. O cidadão escolhe de quem é a caderneta (ele ou um dependente) e tira a foto.
+  2. O app chama esta rota. Se vier erro ou `manualFallback: true`, abre o cadastro manual com a mensagem correspondente.
+  3. **Revisão:** cada dose aparece com `cellCrop` e o recorte de cada campo. Os campos com `value` vêm preenchidos e os com `null` ficam vazios para o cidadão digitar olhando o recorte. Vacina e dose sem `id` são escolhidas na lista do catálogo (`GET /vaccines`). O cidadão pode descartar sugestões.
+  4. Cada dose confirmada é salva com `POST /vaccination-records` (titular) ou `POST /dependents/:id/vaccination-records` (dependente), com `{ vaccineId, doseId, applicationDate, lote?, origin: "OCR_ICR", ocrConfidence }`. Dose já registrada responde `409` e pode ser ignorada.
+- **Erros** (todos com `code`; em qualquer um deles, o app cai no cadastro manual, RNF12):
+
+  | Status | `code` | Quando |
+  | :--- | :--- | :--- |
+  | `400` | `IMAGEM_AUSENTE` | Nenhum arquivo no campo `image` |
+  | `400` | `UPLOAD_INVALIDO` | Mais de um arquivo ou campo com outro nome |
+  | `413` | `IMAGEM_GRANDE` | Arquivo maior que o limite |
+  | `415` | `FORMATO_INVALIDO` | Arquivo que não é JPEG nem PNG |
+  | `422` | `IMAGEM_INVALIDA` | Arquivo que não abre como imagem |
+  | `502` | `OCR_ERRO` | O serviço de OCR respondeu com erro |
+  | `503` | `OCR_INDISPONIVEL` | O serviço de OCR está fora do ar |
+  | `504` | `OCR_TIMEOUT` | O serviço de OCR passou do tempo limite |
+
+  Também `401`, e `403` para o perfil `ADMIN`.
+- **Limitação atual:** o motor de OCR (Tesseract) quase não reconhece escrita à mão. Hoje a rota identifica o modelo e encontra as células preenchidas (vacina e dose dos blocos impressos vêm certas pela posição), mas data, lote e vacina manuscrita costumam vir `null` com o recorte. O contrato não muda quando o motor for trocado (D34).
 
 ### POST `/vaccination-records/confirm` (confirmação presencial, RF010)
 - **Acesso:** Profissional verificado. O profissional aplicador vem da sessão.
@@ -350,7 +433,7 @@ Mesmas regras e respostas da caderneta e do registro manual do titular (D30, D32
 ### GET `/vaccines`
 - **Acesso:** Público
 - **Query:** `targetAudience?` (`CRIANCA|ADOLESCENTE|ADULTO|IDOSO|GESTANTE|ESPECIAL`), `search?`, `isActive?` (padrão `true`)
-- **200:** `data: Vaccine[]`, com `doses[]` ordenadas.
+- **200:** `data: Vaccine[]`, com `doses[]` ordenadas. `aliases[]` traz siglas e nomes populares (ex.: `ACWY`, `MENACWY`), usados no match do OCR (D34). Hoje são definidos só pelo seed.
 - **Erros:** `400`.
 
 ### GET `/vaccines/:id`
