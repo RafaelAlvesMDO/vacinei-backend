@@ -16,6 +16,11 @@ export class UpdateManualVaccinationRecordService {
         doseId: data.doseId,
         applicationDate: data.applicationDate,
         lotNumber: data.lote ?? null,
+        // A origem só muda se for informada; editar à mão uma dose do OCR pode marcá-la como MANUAL
+        ...(data.origin && {
+          origin: data.origin,
+          ocrConfidence: data.origin === 'OCR_ICR' ? data.ocrConfidence ?? null : null,
+        }),
       },
       select: manualRecordSelect,
     });

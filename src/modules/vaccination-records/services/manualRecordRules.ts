@@ -9,6 +9,7 @@ export const manualRecordSelect = {
   userId: true,
   status: true,
   origin: true,
+  ocrConfidence: true,
   applicationDate: true,
   lotNumber: true,
   createdAt: true,

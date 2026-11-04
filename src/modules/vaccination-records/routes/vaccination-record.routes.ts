@@ -4,6 +4,7 @@ import { VaccinationRecordController } from '../controllers/VaccinationRecordCon
 import { ensureAuthenticated } from '../../../middlewares/ensureAuthenticated';
 import { ensureVerifiedProfessional } from '../../../middlewares/ensureVerifiedProfessional';
 import { checkRole } from '../../../middlewares/checkRole';
+import { uploadImage } from '../../../middlewares/uploadImage';
 
 export const vaccinationRecordRoutes = Router();
 export const citizenVaccinationRecordRoutes = Router();
@@ -13,6 +14,10 @@ const vaccinationRecordController = new VaccinationRecordController();
 const ensureCitizen = [ensureAuthenticated, checkRole(UserRole.CIDADAO, UserRole.PROFISSIONAL_SAUDE)];
 
 vaccinationRecordRoutes.post('/', ...ensureCitizen, vaccinationRecordController.create);
+
+// Leitura da caderneta física por foto (RF004 / D34): devolve sugestões, não grava registros.
+// Vale para o titular e para os dependentes; o salvamento usa as rotas de cadastro manual.
+vaccinationRecordRoutes.post('/ocr', ...ensureCitizen, uploadImage, vaccinationRecordController.recognize);
 vaccinationRecordRoutes.put('/:id', ...ensureCitizen, vaccinationRecordController.update);
 vaccinationRecordRoutes.delete('/:id', ...ensureCitizen, vaccinationRecordController.delete);
 

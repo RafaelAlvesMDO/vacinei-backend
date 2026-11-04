@@ -21,7 +21,9 @@ export class CreateManualVaccinationRecordService {
         applicationDate: data.applicationDate,
         lotNumber: data.lote,
         status: VaccineStatus.EM_DIA,
-        origin: RecordOrigin.MANUAL,
+        // Dose vinda do OCR e conferida pelo cidadão continua aguardando confirmação (D25 / D34)
+        origin: data.origin === 'OCR_ICR' ? RecordOrigin.OCR_ICR : RecordOrigin.MANUAL,
+        ocrConfidence: data.origin === 'OCR_ICR' ? data.ocrConfidence ?? null : null,
       },
       select: manualRecordSelect,
     });

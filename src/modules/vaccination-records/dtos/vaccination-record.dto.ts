@@ -33,6 +33,9 @@ export const manualVaccinationRecordSchema = z.object({
   doseId: z.uuid('doseId deve ser um UUID válido'),
   applicationDate: applicationDateSchema,
   lote: loteSchema.optional(),
+  // Dose sugerida pelo OCR e conferida pelo cidadão (RF004 / D34). Padrão: MANUAL
+  origin: z.enum(['MANUAL', 'OCR_ICR'], { error: 'origin deve ser MANUAL ou OCR_ICR' }).optional(),
+  ocrConfidence: z.number().min(0, 'ocrConfidence deve estar entre 0 e 1').max(1, 'ocrConfidence deve estar entre 0 e 1').optional(),
 });
 
 export const citizenIdParamsSchema = z.object({
