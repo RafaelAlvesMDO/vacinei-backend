@@ -19,6 +19,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from leitura_ancoras import ler_vacina_bloco
 from leitura_campos import densidade, ler_campo, mascara_tinta, png_base64
 from poc_ocr import Catalogo
 from textos import ascii_simples
@@ -213,8 +214,14 @@ def _processar_celula(pagina, cel, tela, depurar):
     for campo, rel in pagina.layouts[cel["layout"]]["campos"].items():
         cx0, cy0, cx1, cy1 = _caixa_campo(rel, w, h)
         dep = {} if depurar else None
-        campos[campo] = ler_campo(campo, foto_cel[cy0:cy1, cx0:cx1], tinta[cy0:cy1, cx0:cx1], _catalogo,
-                                  LIMIAR_CONFIANCA, dep)
+        if campo == "vaccine":
+            # Vacina manuscrita: leitura por âncoras da rodada 2 da PoC, no bloco inteiro (leitura_ancoras)
+            nome, conf, recorte = ler_vacina_bloco(cv2.cvtColor(foto_cel, cv2.COLOR_BGR2GRAY), _catalogo, dep)
+            campos[campo] = {"value": nome if conf >= LIMIAR_CONFIANCA else None, "confidence": conf,
+                             "crop": png_base64(recorte, 320) if recorte is not None else None}
+        else:
+            campos[campo] = ler_campo(campo, foto_cel[cy0:cy1, cx0:cx1], tinta[cy0:cy1, cx0:cx1], _catalogo,
+                                      LIMIAR_CONFIANCA, dep)
         if depurar:
             dep["foto"] = foto_cel[cy0:cy1, cx0:cx1]
             dep["tinta"] = 255 - tinta[cy0:cy1, cx0:cx1]
