@@ -90,6 +90,7 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
   - Finalidade da data de nascimento: base do calendário vacinal (RF007).
   - LGPD: princípios da finalidade, necessidade e minimização. Quem já tem o CPF em mãos confirma a identidade, mas a API não divulga o número a terceiros.
 - **Observação:** no banco as colunas continuam aceitando nulo por causa de registros antigos. A obrigatoriedade é garantida pela validação (Zod) no cadastro.
+- **Exceção (D33):** para o dependente, o CPF é opcional (muitas crianças não têm), mas, se informado, é validado e único em toda a base. O responsável vê o CPF completo dos próprios dependentes; o profissional, mascarado.
 - **Requisito:** RF001, RF007, RF010; LGPD.
 
 ### D26 — Consentimento explícito à Política de Privacidade no cadastro
@@ -99,7 +100,7 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Requisito:** RF001; LGPD.
 
 ### D21 — Lista de doses atrasadas só para profissional verificado (busca ativa)
-- **Decisão:** o `GET /dashboard/overdue` lista as pessoas (CIDADAO e PROFISSIONAL_SAUDE ativos) com vacina `ATRASADA`, com nome, CPF mascarado e as vacinas em atraso, e, em outro grupo, as pessoas com doses aguardando conferência (D32). Só o profissional verificado acessa; o `ADMIN` continua apenas com o total agregado do `/summary` (D05). O cálculo é o mesmo do card "Doses atrasadas", para que os números batam.
+- **Decisão:** o `GET /dashboard/overdue` lista as pessoas (CIDADAO e PROFISSIONAL_SAUDE ativos, incluindo dependentes com o nome do responsável, D33) com vacina `ATRASADA`, com nome, CPF mascarado e as vacinas em atraso, e, em outro grupo, as pessoas com doses aguardando conferência (D32). Só o profissional verificado acessa; o `ADMIN` continua apenas com o total agregado do `/summary` (D05). O cálculo é o mesmo do card "Doses atrasadas", para que os números batam.
 - **Motivo:** finalidade de **busca ativa de faltosos**: o profissional precisa saber quem procurar para completar o esquema vacinal. São dados de saúde identificados, então, pelo princípio da necessidade, ficam restritos a quem presta o atendimento, com CPF mascarado (D14) e paginação limitada (máx. 100).
 - **Requisito:** RF009; RS005; LGPD.
 
@@ -125,7 +126,7 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
   - **Validações (RS003):** a vacina precisa existir e estar ativa. A dose precisa pertencer à vacina. A data de aplicação não pode ser futura nem anterior à data de nascimento do titular. O lote é opcional e segue a regra do confirm. A mesma dose não pode ser registrada duas vezes na caderneta (409).
   - **Edição e exclusão:** o titular edita (`PUT`) ou exclui (`DELETE`) o próprio registro só enquanto ele não estiver `CONFIRMADO`. Registro de outra pessoa ou já confirmado responde 403. Depois da confirmação, só um profissional pode corrigir o registro (trabalho futuro).
   - **Status do registro:** o campo `status` do `VaccinationRecord` reaproveita o enum `VaccineStatus`. Num registro, **qualquer valor diferente de `CONFIRMADO` (hoje `EM_DIA`) significa "aguardando confirmação"**. Os valores `ATRASADA` e `COMPLETA` descrevem o esquema da vacina, calculado na caderneta, e não o registro. Na confirmação (`/confirm`), o registro manual é promovido com `action: "CONFIRMED_EXISTING"`, como os registros do seed.
-  - **Dependentes:** o modelo já tem `dependentId` opcional, mas o endpoint ainda não aceita esse campo. Só registros da caderneta do próprio titular (`dependentId` nulo) são criados ou alterados. A lógica de dependentes fica para a etapa 7 (D09).
+  - **Dependentes:** o responsável registra, edita e exclui doses na caderneta do dependente pelas rotas `/dependents/:id/vaccination-records`, com as mesmas regras. A data de aplicação é comparada com o nascimento do dependente (D33).
 - **Melhoria futura:** separar um enum próprio para o status do registro (ex.: `PENDENTE`/`CONFIRMADO`), sem misturar com o status do esquema vacinal. Isso exige migration e ajustes no seed, na caderneta, no dashboard e no confirm.
 - **Motivo:** permitir que o cidadão digitalize o histórico (RF005) sem que um registro não validado ganhe o peso de uma confirmação presencial. Bloquear a alteração após a confirmação preserva a validação por terceiro (RS006). Reaproveitar o enum evita uma migration perto da pré-banca.
 - **Requisito:** RF005, RS003, RS004, RF010.
@@ -143,6 +144,19 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Implementação:** a regra fica no backend (D01), em `calculateAlertStatus` (`CalculateVaccineStatusService`), usada pela caderneta (campo `alert`), pelo `/overdue` e pelo `/summary`. O `status` da caderneta continua o do esquema (todo registro conta como aplicado), porque é a base da próxima dose e da data prevista.
 - **Motivo:** o registro do cidadão não pode encerrar o alerta (nota 7), mas tratá-lo como atraso inflaria os números: no seed, 78 doses aguardam conferência e só 18 vacinas estão de fato atrasadas, e as vacinas só com registros pendentes passariam a contar o atraso desde o nascimento. Separar os grupos dá ao profissional duas ações distintas: procurar quem não tomou a dose e conferir quem já informou.
 - **Requisito:** RF007 (nota 7), RF009, RF010; D06, D21.
+- **Ajuste (2026-11-04, D35):** as três situações valem só para vacinas com pelo menos um registro na caderneta (esquema iniciado). Vacina nunca iniciada não gera alerta nem aparece na caderneta.
+
+### D35 — Alerta de atraso só para esquemas iniciados
+- **Decisão:** o alerta de atraso (`ATRASADA`, D32) vale para **esquemas iniciados**, ou seja, para as doses seguintes de uma vacina que já tem registro na caderneta (confirmado ou aguardando conferência). Vacina **nunca iniciada** não gera alerta e não aparece na caderneta.
+  - **Pontos que seguem a regra:** caderneta (`GET /citizens/:id/vaccination-records` e `/dependents/:id/vaccination-records`), `/dashboard/summary`, `/dashboard/overdue` e alertas do app. Todos já calculam a situação a partir dos registros (`calculateAlertStatus`), então continuam mostrando a mesma coisa.
+  - **Vacinas novas do catálogo (D34):** Varicela, Hepatite A, Dupla Adulto, DTP, Tetra Viral, Meningocócica ACWY, COVID-19 e Pneumocócica 23V só aparecem para quem tem registro delas. Exemplo: no seed, a cidadã `cidadao03` (bebê de 9 meses) continua com as mesmas 6 vacinas na caderneta.
+- **Alternativa avaliada e descartada:** avaliar também as vacinas nunca iniciadas contra uma janela de idade simplificada para iniciar o esquema.
+  - **Impacto no seed:** +34 vacinas atrasadas em 14 pessoas. A D32 ao pé da letra, sem janela, daria +359.
+  - **Por que não:** as janelas simplificadas não valem para adultos (ex.: Tríplice Viral e Febre Amarela até 59 anos, Hepatite B em qualquer idade). Além disso, a mudança mexeria na caderneta, no dashboard e na busca ativa do back, do web e do app às vésperas do congelamento.
+- **Limitação:** a criança que nunca tomou uma vacina do calendário (ex.: Meningocócica C aos 3 meses) não recebe alerta dela; só das doses seguintes das vacinas que já começou.
+- **Melhoria futura:** avaliar as vacinas nunca iniciadas contra o calendário do PNI, com janelas de idade por vacina e por público (criança, adolescente, adulto, gestante, idoso), conferidas com a nota técnica vigente.
+- **Motivo:** sem janelas de idade confiáveis, alertar vacinas nunca iniciadas geraria falsos atrasos em massa, principalmente para adultos, e inflaria o dashboard e a busca ativa. Limitar o alerta aos esquemas iniciados mantém a regra previsível e coerente nos três clientes.
+- **Requisito:** RF006, RF007, RF009; D32, D34.
 
 ## Catálogo
 
@@ -203,15 +217,67 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 - **Decisão:** o OCR da caderneta física roda em um microsserviço Python separado (OpenCV no pré-processamento + `pytesseract`). O app envia a foto ao backend, que chama o serviço e devolve as doses reconhecidas para revisão. Os registros são gravados com origem `OCR_ICR` e ficam pendentes de confirmação (D06). Se o OCR falhar, o app oferece o cadastro manual.
 - **Motivo:** isola as dependências de visão computacional da API Node e mantém o app como cliente simples (D01).
 - **Requisito:** RF004, RS003, RNF05, RNF12.
+- **Atualização (2026-11-04):** o escopo da leitura passou a ser por modelos de caderneta (D34).
+
+### D34 — OCR por modelos de caderneta: o OCR sugere, o cidadão confere
+- **Contexto (PoC, D25):** lendo a página inteira, o OCR acertou 0 de 2 campos; recortando por âncoras, 1 de 2. O gargalo é o Tesseract não reconhecer dígitos manuscritos, e as cadernetas reais variam muito de layout.
+- **Decisão (escopo):** o sistema suporta um **conjunto fechado de modelos de caderneta** (templates em `ocr-service/templates/<modelo>/`, com `reference*.png` e `cells.json`). Foto de outro modelo, ou leitura sem confiança, cai no cadastro manual (RNF12). Modelos atuais:
+  - **`caderneta-crianca-ms`:** Caderneta da Criança (MS), tabelas "até 12 meses" e "a partir de 12 meses".
+  - **`caderneta-maceio-jovens-adultos`:** Caderneta de Vacinação de Jovens e Adultos da Prefeitura de Maceió, com 16 blocos impressos e 16 livres.
+- **Decisão (pipeline):** a entrada é a foto da página inteira (ou das duas páginas abertas).
+  1. **Identificação:** SIFT + RANSAC contra a referência de cada página, com mínimo de 40 inliers; páginas sobrepostas do mesmo modelo são descartadas.
+  2. **Alinhamento:** homografia, com verificação da impressão reencontrada na foto.
+  3. **Células:** recorte das células mapeadas, com ajuste local por correlação.
+  4. **Células vazias:** descartadas pela densidade de tinta à mão (tinta escura fora da impressão da referência, ignorando manchas amareladas).
+  5. **Leitura:** só das células preenchidas.
+- **Decisão (o que vem de onde):**
+  - **Vacina e dose impressas no modelo:** vêm da **posição** da célula. O OCR sugere data e lote.
+  - **Blocos livres:** a vacina vem do OCR, com match aproximado no catálogo pelo nome ou pelos aliases (campo novo `Vaccine.aliases`, migration `vacinas_aliases`); se não casar, fica vazia. A leitura reaproveita o método da rodada 2 da PoC (âncoras dos rótulos, limpeza, Otsu e adaptativa, psm 7 e 8) no bloco alinhado, testando algumas alturas do bloco.
+  - **Lote no modelo de Maceió:** a faixa do lote começa acima da linha do FAB, porque na prática o lote é escrito sobre ela.
+  - **Cada campo vem com o recorte da imagem.** Com baixa confiança (< 0,45), o valor vai vazio e o cidadão preenche olhando o recorte (RF004).
+- **Decisão (catálogo):**
+  - **Vacinas novas no seed:** Meningocócica ACWY (aliases ACWY, MenACWY, MENINGO ACWY), COVID-19, Dupla Adulto (dT), DTP (Tríplice Bacteriana), Tetra Viral (SCRV), Varicela, Hepatite A e Pneumocócica 23-Valente.
+  - **Fora do cálculo de atraso (D32):** COVID-19 (esquema variável) e Pneumocócica 23V (público específico) ficam sem idade recomendada e sem intervalo, como a dTpa, então nunca vencem sozinhas. A 1ª dose da dT depende do histórico (sem idade); as seguintes contam a partir da anterior.
+  - **Atraso só com registro (D35):** a situação de atraso é calculada só para vacinas com registro na caderneta, então as vacinas novas não inflam o dashboard nem a busca ativa. Conferido no seed (referência 04/11/2026): 23 vacinas atrasadas (11 pessoas) e 77 doses aguardando conferência (30 pessoas), antes e depois.
+  - **Doses impressas sem correspondente:** não foram criadas doses novas. Hepatite B 1ª/2ª/3ª do adulto e a 2ª dose do HPV voltam com `doseId: null` e o cidadão escolhe a dose na revisão. Febre Amarela "Dose única"/"Dose" → 1ª Dose; VOP 1º/2º Reforço → doses 4 e 5 da VIP ("1º/2º Reforço (VOP/VIP)").
+- **Decisão (API):**
+  - **`POST /vaccination-records/ocr`:** autenticado, `CIDADAO`/`PROFISSIONAL_SAUDE`. Recebe multipart com uma imagem JPEG/PNG de até 8 MB, encaminha ao serviço com timeout de 20 s e devolve só sugestões com `vaccineId`/`doseId` do catálogo. **Não cria registros.** Serve para o titular e para os dependentes.
+  - **Imagem (LGPD):** processada em memória (multer `memoryStorage`) e descartada, nunca salva nem logada.
+  - **Falhas:** erros com `code` (`OCR_INDISPONIVEL`, `OCR_TIMEOUT` etc.) e `manualFallback: true` quando nada foi reconhecido, para o app cair no cadastro manual.
+  - **Salvamento:** pelas rotas de cadastro manual (D30), que passaram a aceitar `origin: "OCR_ICR"` e `ocrConfidence` (0–1), opcionais. O registro continua aguardando confirmação (D06).
+- **Situação medida (2026-11-04):** na foto do cartão de Maceió, o modelo é identificado (2494 inliers, alinhamento "boa") e só o bloco preenchido (ACWY) é encontrado, sem falsos positivos nos blocos manchados. Data e lote manuscritos voltam vazios: o Tesseract não os reconhece em nenhuma variação testada (altura, espessura, `por`/`eng`, caractere a caractere). A vacina do bloco livre (ACWY) só casou com o catálogo porque a leitura testa várias alturas do bloco (600, 700, 500 e 800 px). Aplicado sem mudanças ao bloco alinhado (cerca de 340 px de altura), o método da rodada 2 leu "PCcwy"/"PreWy". O acerto veio em 600 px ("Acwy", exato) e em 700 px ("Pcwy", com uma letra de diferença), e falhou em 550, 650, 750, 800 e 850 px. É um **acerto pontual e frágil**: não demonstra que a vacina manuscrita é lida de forma confiável. A medição com fotos reais usa `avaliar_templates.py` (gabarito `X.txt` com várias doses por imagem).
+- **Melhorias futuras:**
+  - Modelo de reconhecimento de escrita à mão (ex.: TrOCR) no lugar do Tesseract, sem mudar o contrato.
+  - Mais modelos de caderneta.
+  - Leitura de carimbos e etiquetas de lote.
+  - Esquemas por faixa etária no catálogo (Hepatite B do adulto em 3 doses, HPV em 2 doses), para que essas células tenham `doseId`.
+- **Motivo:** com o layout conhecido, a posição resolve vacina e dose sem depender do OCR, e o reconhecimento do modelo e das células preenchidas já poupa o cidadão de procurar as doses na caderneta. Limitar a modelos conhecidos troca abrangência por confiabilidade, e o cadastro manual cobre o resto.
+- **Requisito:** RF004, RF005, RNF05, RNF12, RS003; D06, D25, D30, D32.
 
 ### D29 — "Ver no mapa" do detalhe da vacina abre a localização de UBS
 - **Decisão:** o atalho "Ver UBS no mapa" do detalhe da vacina redireciona para a localização de UBS (aba UBS, já no Mapa). Exibir a UBS onde a dose foi aplicada fica como melhoria futura.
 - **Motivo:** hoje a confirmação de dose não registra a UBS, e incluí-la muda o fluxo do backend.
 - **Requisito:** RF008 (nota 9).
 
-## Pendências
+## Dependentes
 
-### D09 — Dependentes ainda não implementados
-- **Decisão:** o módulo de dependentes ainda não existe. Quando for implementado, as doses de dependentes devem entrar nas métricas agregadas, na busca do profissional e no fluxo de confirmação (D06).
-- **Motivo:** evitar que dependentes fiquem de fora de relatórios e da validação.
-- **Requisito:** módulo de dependentes.
+### D33 — Dependente é um cidadão sem credenciais, ligado ao responsável
+- **Decisão (modelagem):** o dependente é um `User` com perfil `CIDADAO`, **sem e-mail e sem senha** (`email` e `passwordHash` passaram a aceitar nulo), ligado ao responsável por `responsibleId`. O model `Dependent` e a coluna `vaccination_records.dependent_id`, que nunca foram usados por endpoints, foram removidos (migration `dependentes_como_usuarios`). Campos novos em `User`: `sex` (`MASCULINO`/`FEMININO`) e `relationship` (`FILHO`, `PAI_MAE`, `CONJUGE`, `CURATELADO`, `OUTRO`, opcional).
+  - **Reaproveitamento:** caderneta, `CalculateVaccineStatusService`, as três situações do D32, o registro manual (D30), a confirmação (D06), a busca e o dashboard funcionam sem lógica duplicada, porque os registros continuam ligados por `userId`.
+  - **`onDelete: Restrict`:** apagar o responsável não pode apagar em cascata doses confirmadas, que são dado de saúde. Na prática, contas são só desativadas (D16), e os dependentes de um responsável desativado continuam visíveis para o profissional.
+  - **Sem login:** sem e-mail, o dependente nunca é encontrado no login, no "esqueci a senha" nem na troca de senha. A gestão de usuários do admin (`/users`) ignora dependentes (`404` no detalhe, na edição e na desativação), porque eles não são contas.
+- **Decisão (regras):**
+  - **Quem cadastra:** `CIDADAO` ou `PROFISSIONAL_SAUDE` (o profissional também é cidadão, D11). Dependente não tem dependentes.
+  - **Idade (ECA):** no cadastro, o dependente precisa ter menos de 18 anos, exceto quando o parentesco é `CURATELADO`, que aceita qualquer idade. A data de nascimento nunca é futura. Quem completa 18 anos depois do cadastro continua normalmente: a regra só é reavaliada quando a data de nascimento ou o parentesco mudam.
+  - **RS008 (duplicidade, 409):** CPF já usado por qualquer pessoa da base; ou mesmo nome (sem acentos, maiúsculas e espaços extras, como no D15) e mesma data de nascimento para o mesmo responsável. Responsáveis diferentes podem cadastrar a mesma criança sem CPF (o caso de dois responsáveis fica para depois).
+  - **RS004 (acesso):** os dados do dependente são acessados só pelo responsável (rotas `/dependents/...`) e por profissionais verificados (rotas `/citizens/...` e `/confirm`). Por `/dependents`, um id que não é dependente do usuário logado responde `404`, sem revelar se o cadastro existe. O `ADMIN` continua só com agregados (D05).
+  - **Edição:** dados básicos (nome, nascimento, sexo, CPF, parentesco). A nova data de nascimento não pode ficar depois de uma dose já registrada.
+  - **Remoção:** só se não houver dose `CONFIRMADO`; os registros pendentes são apagados junto. Com dose confirmada, `409`.
+  - **RS006:** o profissional não confirma dose própria nem dos próprios dependentes.
+  - **Profissional:** a busca de cidadãos inclui dependentes com o nome do responsável. A busca pelo CPF do responsável traz também os dependentes dele, porque a criança muitas vezes não tem CPF. A busca ativa (`/overdue`) e as doses recentes também mostram o responsável. As métricas agregadas passam a contar os dependentes (resolve o antigo D09).
+- **Melhorias futuras:**
+  - Dependente com CPF assumir a própria conta ao criar login: hoje o cadastro público responde `409` (CPF já cadastrado). O caminho é converter o dependente em titular (preencher e-mail, senha e consentimento, limpar `responsibleId`), mantendo a caderneta.
+  - Transferência do dependente ao completar 18 anos.
+  - Mais de um responsável por dependente, com convite para o outro responsável.
+- **Motivo:** uma tabela separada obrigaria cada serviço da caderneta, do confirm e do dashboard a aceitar "usuário **ou** dependente", duplicando consultas em cerca de 10 lugares, perto da pré-banca. Com o dependente como `User`, as regras já validadas (D30, D32, RS006) valem para ele automaticamente.
+- **Requisito:** RF012, RS004, RS006, RS008; D09 (resolvido), D11, D14, D30, D32.

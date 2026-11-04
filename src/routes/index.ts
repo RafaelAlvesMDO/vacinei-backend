@@ -10,6 +10,7 @@ import {
 } from '../modules/vaccination-records/routes/vaccination-record.routes';
 import { dashboardRoutes } from '../modules/dashboard/routes/dashboard.routes';
 import { professionalRoutes } from '../modules/professionals/routes/professional.routes';
+import { dependentRoutes } from '../modules/dependents/routes/dependent.routes';
 
 const routes = Router();
 
@@ -42,5 +43,6 @@ routes.use('/citizens', citizenVaccinationRecordRoutes);
 routes.use('/vaccination-records', vaccinationRecordRoutes);
 routes.use('/dashboard', dashboardRoutes);
 routes.use('/professionals', professionalRoutes);
+routes.use('/dependents', dependentRoutes);
 
 export { routes };

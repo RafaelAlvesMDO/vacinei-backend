@@ -1,0 +1,29 @@
+{
+  "_comentario": "Cópia dos nomes e aliases de prisma/seed.ts (D34). O OCR sugere o nome; o backend converte em vaccineId pelo nome ou pelos aliases do banco. Siglas com até 5 letras só casam por token exato (ou com 1 erro, a partir de 4 letras).",
+  "catalogo": [
+    { "nome": "BCG", "apelidos": ["BCG", "BCG ID", "BCG-ID"] },
+    { "nome": "Hepatite B", "apelidos": ["HEPATITE B", "HEP B", "HEPB"] },
+    { "nome": "Pentavalente (DTP/HB/Hib)", "apelidos": ["PENTAVALENTE", "PENTA", "DTP/HB/HIB", "DTP HB HIB"] },
+    { "nome": "Poliomielite Inativada (VIP)", "apelidos": ["VIP", "POLIOMIELITE INATIVADA", "POLIO INATIVADA", "POLIOMIELITE", "VOP", "POLIO ORAL", "VOPB"] },
+    { "nome": "Pneumocócica 10-Valente", "apelidos": ["PNEUMOCOCICA 10", "PNEUMOCOCICA 10 VALENTE", "PNEUMOCOCICA 10V", "PNEUMO 10", "PNEUMO10", "VPC10", "PCV10", "VPC 10"] },
+    { "nome": "Meningocócica C Conjugada", "apelidos": ["MENINGOCOCICA C", "MENINGOCOCICA C CONJUGADA", "MENINGO C", "MENC", "MNC"] },
+    { "nome": "Rotavírus Humano (VRH)", "apelidos": ["ROTAVIRUS", "ROTAVIRUS HUMANO", "VRH", "VORH", "VRH1"] },
+    { "nome": "Febre Amarela", "apelidos": ["FEBRE AMARELA", "F AMARELA", "ANTIAMARILICA"] },
+    { "nome": "Tríplice Viral (SCR)", "apelidos": ["SCR", "TRIPLICE VIRAL", "MMR", "SARAMPO CAXUMBA RUBEOLA"] },
+    { "nome": "HPV Quadrivalente", "apelidos": ["HPV", "HPV4", "HPV QUADRIVALENTE", "PAPILOMAVIRUS"] },
+    { "nome": "dTpa (Tríplice Acelular do Adulto)", "apelidos": ["DTPA", "TRIPLICE ACELULAR", "DTPA ADULTO"] },
+    { "nome": "Influenza (Gripe)", "apelidos": ["INFLUENZA", "GRIPE", "FLU"] },
+    { "nome": "Meningocócica ACWY", "apelidos": ["MENINGOCOCICA ACWY", "MENINGO ACWY", "MENACWY", "MEN ACWY", "ACWY"] },
+    { "nome": "COVID-19", "apelidos": ["COVID", "COVID 19", "COVID-19", "COMIRNATY", "CORONAVAC", "SPIKEVAX"] },
+    { "nome": "Dupla Adulto (dT)", "apelidos": ["DUPLA ADULTO", "DUPLA ADULTO DT", "DT", "DIFTERIA E TETANO"] },
+    { "nome": "DTP (Tríplice Bacteriana)", "apelidos": ["DTP", "TRIPLICE BACTERIANA"] },
+    { "nome": "Tetra Viral (SCRV)", "apelidos": ["TETRA VIRAL", "TETRAVIRAL", "SCRV"] },
+    { "nome": "Varicela", "apelidos": ["VARICELA", "CATAPORA", "VZ"] },
+    { "nome": "Hepatite A", "apelidos": ["HEPATITE A", "HEP A", "HEPA"] },
+    { "nome": "Pneumocócica 23-Valente", "apelidos": ["PNEUMOCOCICA 23", "PNEUMOCOCICA 23 VALENTE", "PNEUMOCOCICA 23V", "PNEUMO 23", "PNEUMO23", "VPP23"] }
+  ],
+  "fora_do_catalogo": [
+    { "nome": "Dengue", "apelidos": ["DENGUE", "QDENGA"] },
+    { "nome": "Herpes Zóster", "apelidos": ["HERPES ZOSTER", "ZOSTER", "SHINGRIX"] }
+  ]
+}

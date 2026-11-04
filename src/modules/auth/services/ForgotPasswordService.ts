@@ -13,7 +13,7 @@ export class ForgotPasswordService {
     const user = await prisma.user.findUnique({ where: { email } });
 
     // Não revela se o e-mail existe: o controller sempre devolve a mesma resposta
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || !user.email) {
       return;
     }
 

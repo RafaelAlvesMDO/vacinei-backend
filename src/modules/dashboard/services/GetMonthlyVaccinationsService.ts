@@ -11,7 +11,7 @@ export class GetMonthlyVaccinationsService {
   /**
    * Vacinas aplicadas por mês nos últimos 12 meses, incluindo o mês atual (RF009).
    * Agrupa pela applicationDate no fuso local; meses sem registros vêm com zero.
-   * Dependentes ficam de fora até o RF012.
+   * Inclui as doses dos dependentes (RF012 / D33).
    */
   async execute() {
     const rows = await prisma.$queryRaw<IMonthlyRow[]>`
@@ -26,8 +26,7 @@ export class GetMonthlyVaccinationsService {
         SELECT date_trunc('month', vr.application_date AT TIME ZONE 'UTC' AT TIME ZONE ${TIMEZONE}) AS month
         FROM vaccination_records vr
         INNER JOIN users u ON u.id = vr.user_id
-        WHERE vr.dependent_id IS NULL
-          AND vr.application_date IS NOT NULL
+        WHERE vr.application_date IS NOT NULL
           AND u.role IN ('CIDADAO'::"UserRole", 'PROFISSIONAL_SAUDE'::"UserRole")
           AND u.is_active = true
       )

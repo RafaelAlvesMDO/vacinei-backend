@@ -41,11 +41,16 @@ export class ConfirmVaccinationService {
 
     const citizen = await prisma.user.findFirst({
       where: { id: citizenId, role: { in: CITIZEN_ROLES }, isActive: true },
-      select: { id: true },
+      select: { id: true, responsibleId: true },
     });
 
     if (!citizen) {
       throw new AppError('Cidadão não encontrado.', 404);
+    }
+
+    // RS006 também vale para os dependentes do próprio profissional (D33)
+    if (citizen.responsibleId === professionalId) {
+      throw new AppError('Não é permitido confirmar a vacinação dos próprios dependentes', 403);
     }
 
     const vaccine = await prisma.vaccine.findFirst({
@@ -64,7 +69,7 @@ export class ConfirmVaccinationService {
     }
 
     const existingRecords = await prisma.vaccinationRecord.findMany({
-      where: { userId: citizenId, dependentId: null, doseId },
+      where: { userId: citizenId, doseId },
       orderBy: { createdAt: 'asc' },
       select: { id: true, status: true, applicationDate: true },
     });

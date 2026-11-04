@@ -10,6 +10,8 @@ import { CreateManualVaccinationRecordService } from '../services/CreateManualVa
 import { DeleteManualVaccinationRecordService } from '../services/DeleteManualVaccinationRecordService';
 import { GetCitizenVaccinationCardService } from '../services/GetCitizenVaccinationCardService';
 import { UpdateManualVaccinationRecordService } from '../services/UpdateManualVaccinationRecordService';
+import { RecognizeVaccinationCardService } from '../services/RecognizeVaccinationCardService';
+import { AppError } from '../../../errors/AppError';
 
 export class VaccinationRecordController {
   async create(req: Request, res: Response): Promise<Response> {
@@ -44,6 +46,21 @@ export class VaccinationRecordController {
     await deleteManualVaccinationRecordService.execute(req.user.id, id);
 
     return res.status(204).send();
+  }
+
+  // Leitura da caderneta por foto (RF004 / D34): só sugestões, nada é gravado
+  async recognize(req: Request, res: Response): Promise<Response> {
+    if (!req.file) {
+      throw new AppError('Envie a foto da caderneta no campo "image".', 400, 'IMAGEM_AUSENTE');
+    }
+
+    const recognizeVaccinationCardService = new RecognizeVaccinationCardService();
+    const result = await recognizeVaccinationCardService.execute(req.file.buffer, req.file.mimetype);
+
+    return res.status(200).json({
+      status: 'success',
+      data: result,
+    });
   }
 
   async confirm(req: Request, res: Response): Promise<Response> {

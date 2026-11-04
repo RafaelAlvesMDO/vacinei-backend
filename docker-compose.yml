@@ -14,5 +14,28 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  # Serviço HTTP do OCR (D25 / D34), chamado pelo backend em OCR_SERVICE_URL. Não grava imagens.
+  ocr-api:
+    build: ./ocr-service
+    image: vacinei-ocr
+    container_name: vacinei-ocr
+    restart: unless-stopped
+    environment:
+      OCR_MAX_IMAGE_MB: ${OCR_MAX_IMAGE_MB:-8}
+    ports:
+      - "8000:8000"
+
+  # Prova de conceito e avaliação do OCR, com as fotos de teste. Só sobe com:
+  #   docker compose --profile ocr run --rm ocr                               (PoC: página inteira e âncoras)
+  #   docker compose --profile ocr run --rm ocr python avaliar_templates.py   (modelos de caderneta, D34)
+  ocr:
+    image: vacinei-ocr
+    build: ./ocr-service
+    profiles: ["ocr"]
+    command: ["python", "poc_ocr.py", "--entrada", "/amostras", "--saida", "/saida"]
+    volumes:
+      - ${OCR_SAMPLES_DIR:-./ocr-service/amostras}:/amostras:ro
+      - ${OCR_OUTPUT_DIR:-./ocr-service/saida}:/saida
+
 volumes:
   pgdata:

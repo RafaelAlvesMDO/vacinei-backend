@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
+import { MulterError } from 'multer';
 import { AppError } from '../errors/AppError';
 
 export function errorHandler(
@@ -14,6 +15,19 @@ export function errorHandler(
     return res.status(error.statusCode).json({
       status: 'error',
       message: error.message,
+      ...(error.code && { code: error.code }),
+    });
+  }
+
+  // Upload de arquivo (multer): tamanho, quantidade ou campo inesperado
+  if (error instanceof MulterError) {
+    const tooLarge = error.code === 'LIMIT_FILE_SIZE';
+    return res.status(tooLarge ? 413 : 400).json({
+      status: 'error',
+      message: tooLarge
+        ? 'A imagem excede o tamanho máximo permitido.'
+        : 'Envie uma única imagem no campo "image".',
+      code: tooLarge ? 'IMAGEM_GRANDE' : 'UPLOAD_INVALIDO',
     });
   }
 

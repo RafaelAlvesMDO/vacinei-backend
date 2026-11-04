@@ -8,12 +8,11 @@ import { calculateAlertStatus } from '../../vaccination-records/services/Calcula
  * (D32), em lote: doses atrasadas sem registro e doses informadas aguardando
  * conferência. Compartilhado pelo /summary e pelo /overdue para que o card
  * "Doses atrasadas" e a lista de busca ativa batam.
- * Dependentes entram com o RF012.
+ * Dependentes (RF012 / D33) são usuários CIDADAO e entram junto, com o responsável.
  */
 export async function loadCitizenVaccineStatuses(referenceDate = new Date()) {
   const records = await prisma.vaccinationRecord.findMany({
     where: {
-      dependentId: null,
       user: { role: { in: CITIZEN_ROLES }, isActive: true },
     },
     select: {
@@ -22,7 +21,9 @@ export async function loadCitizenVaccineStatuses(referenceDate = new Date()) {
       status: true,
       applicationDate: true,
       dose: { select: { vaccineId: true, vaccine: { select: { name: true } } } },
-      user: { select: { name: true, cpf: true, birthDate: true } },
+      user: {
+        select: { name: true, cpf: true, birthDate: true, responsible: { select: { id: true, name: true } } },
+      },
     },
   });
 
