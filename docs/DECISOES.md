@@ -284,6 +284,8 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
 
 ## Entrega
 
+D36 — Notificações locais e APK: decisão do app, registrada no repositório do frontend.
+
 ### D37 — Congelamento do código a partir de 11/11/2026
 - **Decisão:** a partir de **11/11/2026**, antes da banca de **17/11/2026**, o código fica congelado.
   - **Não entram:** funcionalidades novas, mudanças de tela, mudanças no contrato da API (`docs/API.md`) ou no schema do banco (`prisma/schema.prisma`, migrations).
