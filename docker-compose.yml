@@ -5,10 +5,11 @@ services:
     image: postgres:15-alpine
     container_name: vacinei-postgres
     restart: always
+    # Credenciais lidas do .env (veja o .env.example). Só valem na criação do volume pgdata.
     environment:
-      POSTGRES_USER: rafael
-      POSTGRES_PASSWORD: 123456
-      POSTGRES_DB: vacinei_db
+      POSTGRES_USER: ${POSTGRES_USER:?Defina POSTGRES_USER no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-vacinei_db}
     ports:
       - "5432:5432"
     volumes:
