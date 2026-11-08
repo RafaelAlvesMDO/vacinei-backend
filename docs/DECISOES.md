@@ -281,3 +281,19 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
   - Mais de um responsável por dependente, com convite para o outro responsável.
 - **Motivo:** uma tabela separada obrigaria cada serviço da caderneta, do confirm e do dashboard a aceitar "usuário **ou** dependente", duplicando consultas em cerca de 10 lugares, perto da pré-banca. Com o dependente como `User`, as regras já validadas (D30, D32, RS006) valem para ele automaticamente.
 - **Requisito:** RF012, RS004, RS006, RS008; D09 (resolvido), D11, D14, D30, D32.
+
+## Entrega
+
+D36 — Notificações locais e APK: decisão do app, registrada no repositório do frontend.
+
+### D37 — Congelamento do código a partir de 11/11/2026
+- **Decisão:** a partir de **11/11/2026**, antes da banca de **17/11/2026**, o código fica congelado.
+  - **Não entram:** funcionalidades novas, mudanças de tela, mudanças no contrato da API (`docs/API.md`) ou no schema do banco (`prisma/schema.prisma`, migrations).
+  - **Podem entrar:**
+    - correções de bugs encontrados em teste;
+    - calibração do OCR restrita ao `ocr-service` (`cells.json`, limiares de identificação, alinhamento e densidade de tinta, pré-processamento), sem mudar o formato da resposta;
+    - documentação, seed e textos.
+  - **OCR sem novo APK:** a calibração roda no servidor, então não exige gerar outro APK do app.
+  - **Fluxo:** toda mudança depois do congelamento vai em commit `fix:`, `docs:` ou `chore(ocr):` na `dev`, com PR para a `main`.
+- **Motivo:** chegar à banca com uma versão estável e já testada nos três clientes, sem risco de quebrar o que foi validado. O OCR é a parte que mais depende de ajuste com fotos reais e pode ser calibrado sem afetar o contrato nem o app.
+- **Requisito:** processo de entrega do TCC; D25, D34.

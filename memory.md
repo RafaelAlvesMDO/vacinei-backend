@@ -27,7 +27,8 @@ Este documento registra o status atual, decisões de arquitetura e próximos pas
     - **Medido na foto do cartão de Maceió:** modelo identificado (2494 inliers, alinhamento "boa"), só o bloco ACWY encontrado e zero falsos positivos nos blocos manchados. Data e lote manuscritos voltam vazios, com recorte: o Tesseract não reconhece escrita à mão. A vacina do bloco livre usa a leitura por âncoras da rodada 2 (`leitura_ancoras.py`) e é lida como "Acwy" → Meningocócica ACWY, mas só em algumas alturas de bloco (acerto frágil). A faixa do lote em Maceió inclui a linha do FAB.
     - **D35 (2026-11-04):** o alerta de atraso vale só para esquemas iniciados (D32 ajustada). Vacina nunca iniciada não gera alerta nem aparece na caderneta. A janela de idade por vacina (+34 atrasadas no seed) foi descartada antes do congelamento; avaliar o calendário do PNI por público fica como melhoria futura.
     - **Avaliação com fotos reais:** `avaliar_templates.py` (gabarito `X.txt` por imagem, com várias doses). A PoC antiga (`poc_ocr.py`, perfil `ocr`) continua funcionando.
-- **Data da Última Atualização:** 2026-11-04
+  - **Congelamento do código (D37, a partir de 11/11/2026; banca em 17/11/2026):** não entram funcionalidades novas, mudanças de tela, de contrato da API ou de schema. Podem entrar correções de bugs achados em teste, calibração do OCR só no `ocr-service` (`cells.json`, limiares de identificação, alinhamento e densidade de tinta, pré-processamento) sem mudar o formato da resposta, e documentação, seed e textos. A calibração do OCR roda no servidor e não exige novo APK. Toda mudança vai em commit `fix:`, `docs:` ou `chore(ocr):` na `dev`, com PR para a `main`.
+- **Data da Última Atualização:** 2026-11-08
 
 ---
 
