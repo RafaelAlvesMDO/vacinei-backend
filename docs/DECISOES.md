@@ -246,6 +246,20 @@ Consulte este arquivo antes de alterar qualquer regra de negócio.
   - **Falhas:** erros com `code` (`OCR_INDISPONIVEL`, `OCR_TIMEOUT` etc.) e `manualFallback: true` quando nada foi reconhecido, para o app cair no cadastro manual.
   - **Salvamento:** pelas rotas de cadastro manual (D30), que passaram a aceitar `origin: "OCR_ICR"` e `ocrConfidence` (0–1), opcionais. O registro continua aguardando confirmação (D06).
 - **Situação medida (2026-11-04):** na foto do cartão de Maceió, o modelo é identificado (2494 inliers, alinhamento "boa") e só o bloco preenchido (ACWY) é encontrado, sem falsos positivos nos blocos manchados. Data e lote manuscritos voltam vazios: o Tesseract não os reconhece em nenhuma variação testada (altura, espessura, `por`/`eng`, caractere a caractere). A vacina do bloco livre (ACWY) só casou com o catálogo porque a leitura testa várias alturas do bloco (600, 700, 500 e 800 px). Aplicado sem mudanças ao bloco alinhado (cerca de 340 px de altura), o método da rodada 2 leu "PCcwy"/"PreWy". O acerto veio em 600 px ("Acwy", exato) e em 700 px ("Pcwy", com uma letra de diferença), e falhou em 550, 650, 750, 800 e 850 px. É um **acerto pontual e frágil**: não demonstra que a vacina manuscrita é lida de forma confiável. A medição com fotos reais usa `avaliar_templates.py` (gabarito `X.txt` com várias doses por imagem).
+- **Nota (2026-11-09) — avaliação final e encerramento do OCR:**
+  - **Avaliação final** (`avaliar_templates.py`, 3 cadernetas preenchidas com dados fictícios: Criança até 12 meses, Criança a partir de 12 meses e Maceió adulto):
+    - Modelo identificado em 3/3. Células preenchidas 20/20, sem falsos positivos. Vacina 19/20, dose 17/17, data 0/20 e lote 0/19 (o lote da ACWY é incerto no gabarito). Tempo de 2,5 a 8,5 s por foto, abaixo do timeout de 20 s.
+    - A falha da Penta 2ª dose e o falso positivo em `principal-05` eram erros de gabarito, e não de calibração: a célula da Penta estava em branco na foto, e a do `principal-05` tinha ACWY escrita à mão. As células preenchidas ficaram com densidade de tinta de 0,034 a 0,107 e as vazias com 0,000, então o limiar `OCR_CELL_INK` (0,006) foi mantido.
+  - **Experimento TrOCR** (`microsoft/trocr-*-handwritten`, CPU, só nos recortes de data e lote, fora do serviço):
+    - **small:** 4/20 datas, com cerca de 0,7 s por recorte (7 a 29 s por foto, somando o pipeline).
+    - **base:** 6/20 datas, com cerca de 4 s por recorte (34 a 77 s por foto, acima do timeout).
+    - **Lote:** 0/20 nos dois modelos. As leituras ficam próximas (ex.: `RTAK02` para RT4K02), mas o recorte perde o primeiro caractere junto ao rótulo "Lote:" e o modelo, treinado em inglês, inventa palavras.
+    - **Imagem Docker:** passaria de 697 MB para cerca de 1,95 GB (small) ou 3,0 GB (base), por causa do torch e dos pesos.
+  - **Decisão:** não integrar o TrOCR. O Tesseract continua no serviço, e a data e o lote ficam para o cidadão conferir e preencher olhando o recorte (RF004). O OCR fica encerrado para a banca (D37).
+  - **Melhorias futuras (complementam a lista abaixo):**
+    - Motor de escrita à mão treinado em português.
+    - Recorte que não corte o primeiro caractere junto ao rótulo.
+    - Leitura da vacina manuscrita nos blocos livres (ex.: "Febre Amarela" do `principal-30` não foi lida).
 - **Melhorias futuras:**
   - Modelo de reconhecimento de escrita à mão (ex.: TrOCR) no lugar do Tesseract, sem mudar o contrato.
   - Mais modelos de caderneta.
