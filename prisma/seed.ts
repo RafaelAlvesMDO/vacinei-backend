@@ -46,14 +46,15 @@ type VaccinationProfile = {
 };
 
 const PROFILES: Record<string, VaccinationProfile> = {
-  // Bebê de 7 meses com esquema em dia (Penta e Rota completas)
+  // Bebê de 7 meses com esquema em dia (Penta e Rota completas). A 3ª dose da VIP fica prevista
+  // para 4 dias depois do seed (intervalo de 60 dias), para o lembrete antecipado da D31 aparecer.
   BEBE_EM_DIA: {
     bornDaysAgo: 210,
     vaccines: {
       BCG: [208],
       'Hepatite B': [208],
       'Pentavalente (DTP/HB/Hib)': [150, 90, 28],
-      'Poliomielite Inativada (VIP)': [150, 90, 28],
+      'Poliomielite Inativada (VIP)': [150, 56],
       'Pneumocócica 10-Valente': [150, 90],
       'Rotavírus Humano (VRH)': [150, 90],
       'Meningocócica C Conjugada': [120, 60],
